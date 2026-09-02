@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-zip:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Tag must match csproj Version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}" -replace '^v',''
+          $csproj = "Spider8DAQ.App/Spider8DAQ.App.csproj"
+          $m = Select-String -Path $csproj -Pattern '<Version>([^<]+)</Version>' | Select-Object -First 1
+          if (-not $m) { throw "Lipseste <Version> in $csproj" }
+          $ver = $m.Matches[0].Groups[1].Value
+          if ($ver -ne $tag) {
+            throw "Tag $tag nu coincide cu FileVersion/csproj $ver. Actualizati csproj inainte de tag."
+          }
+          Write-Host "Release $ver"
+
+      - name: Build Core + App
+        run: |
+          dotnet build Spider8DAQ.Core/Spider8DAQ.Core.csproj -c Release --verbosity minimal
+          dotnet build Spider8DAQ.App/Spider8DAQ.App.csproj -c Release --verbosity minimal
+
+      - name: Tests
+        run: dotnet test Spider8DAQ.Core.Tests/Spider8DAQ.Core.Tests.csproj -c Release --no-restore --verbosity minimal
+
+      - name: Publish win-x86 (folder, not single-file)
+        run: >
+          dotnet publish Spider8DAQ.App/Spider8DAQ.App.csproj
+          -c Release -r win-x86 --self-contained true
+          -p:PublishSingleFile=false
+          -o publish-v2
+
+      - name: Zip publish folder
+        shell: pwsh
+        run: |
+          if (Test-Path UPETAcqLab-update.zip) { Remove-Item UPETAcqLab-update.zip -Force }
+          Compress-Archive -Path (Join-Path (Get-Location) 'publish-v2\*') -DestinationPath UPETAcqLab-update.zip -Force
+          Get-Item UPETAcqLab-update.zip | Format-List Name, Length
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" UPETAcqLab-update.zip --title "${{ github.ref_name }}" --generate-notes

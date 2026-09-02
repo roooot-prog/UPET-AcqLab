@@ -1,0 +1,2 @@
+﻿Descarcati manual FTDI VCP WHQL: https://ftdichip.com/drivers/vcp-drivers/
+Extrati INF/CAT/SYS in acest folder (ftdi\). Instalatorul UPET le va instala cu pnputil.

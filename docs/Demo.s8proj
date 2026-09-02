@@ -1,0 +1,26 @@
+{
+  "name": "Demo Simulator",
+  "deviceMode": "Simulator",
+  "comPort": null,
+  "baudRate": 9600,
+  "sampleRateHz": 50,
+  "channels": [
+    { "index": 0, "name": "Force", "unit": "N", "enabled": true, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 1, "name": "Strain", "unit": "mV/V", "enabled": true, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 2, "name": "CH3", "unit": "mV/V", "enabled": true, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 3, "name": "CH4", "unit": "mV/V", "enabled": true, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 4, "name": "CH5", "unit": "mV/V", "enabled": false, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 5, "name": "CH6", "unit": "mV/V", "enabled": false, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 6, "name": "CH7", "unit": "mV/V", "enabled": false, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null },
+    { "index": 7, "name": "CH8", "unit": "mV/V", "enabled": false, "scale": 1.0, "offset": 0.0, "tareValue": 0.0, "isMathChannel": false, "mathExpression": null }
+  ],
+  "mathChannels": [
+    { "name": "ForceAvg", "unit": "N", "operation": "Average", "sourceA": 0, "sourceB": null, "windowSize": 25, "enabled": true }
+  ],
+  "trigger": {
+    "enabled": false,
+    "channelIndex": 0,
+    "threshold": 0.5,
+    "risingEdge": true
+  }
+}

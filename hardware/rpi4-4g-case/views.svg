@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 640" width="920" height="640">
+  <rect width="920" height="640" fill="#f4f1ea"/>
+  <text x="40" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#111">Carcas? Raspberry Pi 4 + HAT 4G — 2 antene tip router</text>
+  <text x="40" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#444">hardware/rpi4-4g-case/rpi4_4g_hat_case.scad  ·  gabarit corp ~108 × 79 × 36 mm</text>
+
+  <!-- TOP VIEW -->
+  <g transform="translate(40,90)">
+    <text x="119" y="-8" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111">vedere de sus</text>
+    <!-- antennas -->
+    <ellipse cx="89" cy="-8" rx="9" ry="42" fill="#1a1a1a"/>
+    <ellipse cx="199" cy="-8" rx="9" ry="42" fill="#1a1a1a"/>
+    <rect x="85" y="28" width="8" height="16" fill="#1a1a1a"/>
+    <rect x="195" y="28" width="8" height="16" fill="#1a1a1a"/>
+    <!-- body -->
+    <rect x="0" y="44" width="238" height="174" rx="10" fill="#2c2c2c" stroke="#111" stroke-width="1.5"/>
+    <rect x="6" y="50" width="226" height="162" rx="7" fill="none" stroke="#555" stroke-width="0.8"/>
+    <!-- Pi -->
+    <rect x="30" y="64" width="187" height="123" fill="#2f7a38" stroke="#1d4e24"/>
+    <!-- HAT -->
+    <rect x="30" y="64" width="143" height="123" fill="#1e4d8c" fill-opacity="0.78" stroke="#132f54"/>
+    <rect x="68" y="92" width="66" height="66" rx="2" fill="#4a4a4a"/>
+    <!-- USB/ETH -->
+    <rect x="210" y="67" width="28" height="34" rx="2" fill="#c8c8c8"/>
+    <rect x="210" y="106" width="28" height="34" rx="2" fill="#c8c8c8"/>
+    <rect x="212" y="146" width="26" height="32" rx="2" fill="#8a8a8a"/>
+    <!-- SMA -->
+    <circle cx="89" cy="58" r="9" fill="#888" stroke="#222"/>
+    <circle cx="199" cy="58" r="9" fill="#888" stroke="#222"/>
+    <text x="89" y="61" text-anchor="middle" font-size="7" fill="#fff" font-family="Segoe UI, Arial, sans-serif">MAIN</text>
+    <text x="199" y="61" text-anchor="middle" font-size="7" fill="#fff" font-family="Segoe UI, Arial, sans-serif">AUX</text>
+    <text x="100" y="128" font-size="9" fill="#fff" font-family="Segoe UI, Arial, sans-serif">4G HAT</text>
+    <text x="140" y="176" text-anchor="middle" font-size="8" fill="#d6f5d6" font-family="Segoe UI, Arial, sans-serif">Pi 4</text>
+    <!-- dims -->
+    <path d="M0 32 H238" stroke="#1a1a1a" fill="none"/>
+    <path d="M0 28 V36 M238 28 V36" stroke="#1a1a1a" fill="none"/>
+    <text x="119" y="26" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial, sans-serif">108 mm</text>
+    <path d="M-16 44 V218" stroke="#1a1a1a" fill="none"/>
+    <path d="M-20 44 H-12 M-20 218 H-12" stroke="#1a1a1a" fill="none"/>
+    <text x="-28" y="135" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial, sans-serif" transform="rotate(-90 -28 135)">79 mm</text>
+    <path d="M89 -54 H199" stroke="#1a1a1a" fill="none"/>
+    <path d="M89 -58 V-50 M199 -58 V-50" stroke="#1a1a1a" fill="none"/>
+    <text x="144" y="-58" text-anchor="middle" font-size="11" font-family="Segoe UI, Arial, sans-serif">50 mm</text>
+  </g>
+
+  <!-- FRONT VIEW -->
+  <g transform="translate(340,160)">
+    <text x="119" y="-8" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111">fa?? · USB-C / HDMI</text>
+    <rect x="70" y="-110" width="8" height="110" fill="#1a1a1a"/>
+    <rect x="140" y="-110" width="8" height="110" fill="#1a1a1a"/>
+    <ellipse cx="74" cy="-114" rx="11" ry="16" fill="#1a1a1a"/>
+    <ellipse cx="144" cy="-114" rx="11" ry="16" fill="#1a1a1a"/>
+    <rect x="0" y="0" width="238" height="80" rx="8" fill="#2c2c2c" stroke="#111" stroke-width="1.5"/>
+    <rect x="30" y="48" width="18" height="10" rx="2" fill="#222"/>
+    <rect x="62" y="48" width="14" height="10" rx="1" fill="#88ccff"/>
+    <rect x="88" y="48" width="14" height="10" rx="1" fill="#88ccff"/>
+    <circle cx="124" cy="53" r="6" fill="#111"/>
+    <rect x="150" y="18" width="10" height="4" fill="#111"/>
+    <rect x="164" y="18" width="10" height="4" fill="#111"/>
+    <rect x="178" y="18" width="10" height="4" fill="#111"/>
+    <rect x="192" y="18" width="10" height="4" fill="#111"/>
+    <path d="M0 96 H238" stroke="#1a1a1a" fill="none"/>
+    <text x="119" y="112" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial, sans-serif">108 mm</text>
+    <path d="M250 0 V80" stroke="#1a1a1a" fill="none"/>
+    <text x="268" y="44" font-size="12" font-family="Segoe UI, Arial, sans-serif">36 mm</text>
+    <path d="M260 -110 V0" stroke="#1a1a1a" fill="none"/>
+    <text x="268" y="-50" font-size="12" font-family="Segoe UI, Arial, sans-serif">~165 mm</text>
+  </g>
+
+  <!-- SIDE VIEW -->
+  <g transform="translate(720,160)">
+    <text x="40" y="-8" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111">USB / ETH</text>
+    <rect x="32" y="-90" width="8" height="90" fill="#1a1a1a"/>
+    <ellipse cx="36" cy="-94" rx="11" ry="16" fill="#1a1a1a"/>
+    <rect x="0" y="0" width="80" height="80" rx="8" fill="#2c2c2c" stroke="#111" stroke-width="1.5"/>
+    <rect x="18" y="8" width="44" height="20" rx="2" fill="#c8c8c8"/>
+    <rect x="18" y="32" width="44" height="20" rx="2" fill="#c8c8c8"/>
+    <rect x="20" y="56" width="40" height="18" rx="2" fill="#8a8a8a"/>
+    <path d="M0 96 H80" stroke="#1a1a1a" fill="none"/>
+    <text x="40" y="112" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial, sans-serif">79 mm</text>
+  </g>
+
+  <!-- LEGEND -->
+  <g transform="translate(40,380)">
+    <rect width="840" height="230" rx="12" fill="#fff" stroke="#ccc"/>
+    <text x="24" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#111">Stiv? intern? ?i print</text>
+    <text x="24" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Stâlpi 3.2 mm ? Raspberry Pi 4 ? header GPIO ? HAT SIM7600 ? pigtail-uri U.FL ? SMA în capac.</text>
+    <text x="24" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Antenele paddle se în?urubeaz? pe MAIN / AUX ca la un router 4G. Capacul se scoate pentru cartela SIM.</text>
+    <text x="24" y="102" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Material: PETG, strat 0.20 mm, 3 pere?i, 25% infill. Baza cu podeaua pe pat; capacul cu buza pe pat.</text>
+
+    <rect x="24" y="124" width="22" height="14" fill="#2f7a38"/>
+    <text x="54" y="136" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Raspberry Pi 4  (85 × 56 mm)</text>
+    <rect x="24" y="148" width="22" height="14" fill="#1e4d8c"/>
+    <text x="54" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">HAT 4G  (65 × 56 mm, pe GPIO)</text>
+    <rect x="24" y="172" width="22" height="14" fill="#1a1a1a"/>
+    <text x="54" y="184" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Antene LTE paddle SMA  (MAIN + AUX, 50 mm distan??)</text>
+    <rect x="24" y="196" width="22" height="14" fill="#2c2c2c"/>
+    <text x="54" y="208" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Corp PETG  ~108 × 79 × 36 mm f?r? antene</text>
+
+    <text x="460" y="136" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">SMA: D-hole Ø6.55 mm, flat 6.05 mm</text>
+    <text x="460" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">?uruburi: 4× M2.5 (pl?ci) + 4× M3 (capac)</text>
+    <text x="460" y="184" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Op?ional: knockout GPS Ø6.5 mm</text>
+    <text x="460" y="208" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#333">Export: .\\export-stl.ps1  (necesit? OpenSCAD)</text>
+  </g>
+</svg>

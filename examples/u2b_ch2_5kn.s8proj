@@ -1,0 +1,25 @@
+﻿{
+  "name": "U2B CH2 5kN Full",
+  "deviceMode": "UsbHbm",
+  "comPort": null,
+  "baudRate": 9600,
+  "sampleRateHz": 50,
+  "channels": [
+    { "index": 0, "name": "CH0", "unit": "µm/m", "enabled": false, "scale": 1000, "bridge": "Half", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 1, "name": "CH1", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 2, "name": "U2B 5kN", "unit": "N", "enabled": true, "scale": 2500, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "sensorId": "u2b-5kn", "sensorName": "U2B 5kN", "sensorCategory": "Forță / Celule de sarcină", "capacity": 5000, "alarmEnabled": true, "alarmLow": -5250, "alarmHigh": 5250 },
+    { "index": 3, "name": "CH3", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 4, "name": "CH4", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 5, "name": "CH5", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 6, "name": "CH6", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 },
+    { "index": 7, "name": "CH7", "unit": "mV/V", "enabled": false, "scale": 1, "bridge": "Full", "rangeMvPerV": 3, "filterHz": 5, "channelSampleRateHz": 50, "excitationV": 2.5, "tareValue": 0, "alarmLow": -1E+09, "alarmHigh": 1E+09 }
+  ],
+  "mathChannels": [],
+  "computeChannels": [],
+  "plotMode": "YT",
+  "meta": {
+    "comment": "catman Easy V5 U2B 5kN on Spider8 CH2: Full bridge, 50 Hz / BE 5 Hz, 2 mV/V→5000 N (Scale=2500), R-Shunt 100 kΩ. Apply box 1-based: type 3 for CH2 row.",
+    "sensorSummary": "u2b-5kn@CH2",
+    "calibrationNotes": "Easy two-point: -0.00864 mV/V→0 N, 2.000 mV/V→5000 N. Catalog uses nominal Scale=2500 + Zero/Tare after wiring. Exc Spider8 2.5 V (Easy 5 V)."
+  }
+}

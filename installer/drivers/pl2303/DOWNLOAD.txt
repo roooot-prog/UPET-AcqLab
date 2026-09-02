@@ -1,0 +1,2 @@
+﻿Prolific PL2303: descarcati driverul oficial de pe https://www.prolific.com.tw/
+Extrati INF/CAT/SYS aici. Instalatorul UPET ruleaza pnputil pe orice INF gasit.

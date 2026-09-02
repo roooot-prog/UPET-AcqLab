@@ -1,0 +1,252 @@
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Input;
+using Microsoft.Win32;
+using Spider8DAQ.Core;
+using Spider8DAQ.Core.Integrations;
+
+namespace Spider8DAQ.App.ViewModels;
+
+public partial class MainViewModel
+{
+    private LabCameraHub? _camera;
+    private ThirdPartyExportSettings _integrations = new();
+    private string _cameraStatus = "Cameră: opțional — atașați imagini sau urmăriți un folder.";
+    private string _integrationStatus = "Integrări 3rd-party: dezactivate.";
+    private bool _cameraWatchDuringRecord = true;
+    private string _cameraWatchFolder = "";
+
+    public ObservableCollection<string> CameraShots { get; } = new();
+
+    public ICommand CameraAttachCommand { get; private set; } = null!;
+    public ICommand CameraOpenWindowsCommand { get; private set; } = null!;
+    public ICommand CameraOpenFolderCommand { get; private set; } = null!;
+    public ICommand CameraRefreshCommand { get; private set; } = null!;
+    public ICommand CameraStartWatchCommand { get; private set; } = null!;
+    public ICommand CameraStopWatchCommand { get; private set; } = null!;
+    public ICommand SaveIntegrationsCommand { get; private set; } = null!;
+    public ICommand TestIntegrationsCommand { get; private set; } = null!;
+
+    public string CameraStatus { get => _cameraStatus; set { _cameraStatus = value; OnPropertyChanged(); } }
+    public string IntegrationStatus { get => _integrationStatus; set { _integrationStatus = value; OnPropertyChanged(); } }
+
+    public bool CameraWatchDuringRecord
+    {
+        get => _cameraWatchDuringRecord;
+        set { _cameraWatchDuringRecord = value; OnPropertyChanged(); }
+    }
+
+    public string CameraWatchFolder
+    {
+        get => _cameraWatchFolder;
+        set { _cameraWatchFolder = value; OnPropertyChanged(); }
+    }
+
+    public bool IntegrationEnabled
+    {
+        get => _integrations.Enabled;
+        set { _integrations.Enabled = value; OnPropertyChanged(); }
+    }
+
+    public string IntegrationOutboundFolder
+    {
+        get => _integrations.OutboundFolder;
+        set { _integrations.OutboundFolder = value; OnPropertyChanged(); }
+    }
+
+    public string IntegrationWebhookUrl
+    {
+        get => _integrations.WebhookUrl;
+        set { _integrations.WebhookUrl = value; OnPropertyChanged(); }
+    }
+
+    public bool IntegrationCopyCsv
+    {
+        get => _integrations.CopyCsv;
+        set { _integrations.CopyCsv = value; OnPropertyChanged(); }
+    }
+
+    public bool IntegrationPostMetadata
+    {
+        get => _integrations.PostMetadata;
+        set { _integrations.PostMetadata = value; OnPropertyChanged(); }
+    }
+
+    private void WireIntegrationsCommands()
+    {
+        _camera = new LabCameraHub(AppPaths.Camera);
+        _camera.SnapshotAdded += (_, path) => _dispatcher.Invoke(() =>
+        {
+            if (!CameraShots.Contains(path))
+                CameraShots.Insert(0, path);
+            while (CameraShots.Count > 80) CameraShots.RemoveAt(CameraShots.Count - 1);
+            CameraStatus = $"Snapshot: {Path.GetFileName(path)}";
+        });
+
+        _integrations = ThirdPartyExporter.Load();
+        OnPropertyChanged(nameof(IntegrationEnabled));
+        OnPropertyChanged(nameof(IntegrationOutboundFolder));
+        OnPropertyChanged(nameof(IntegrationWebhookUrl));
+        OnPropertyChanged(nameof(IntegrationCopyCsv));
+        OnPropertyChanged(nameof(IntegrationPostMetadata));
+        IntegrationStatus = _integrations.Enabled
+            ? "Integrări 3rd-party: active."
+            : "Integrări 3rd-party: dezactivate.";
+
+        CameraAttachCommand = new RelayCommand(AttachCameraImage);
+        CameraOpenWindowsCommand = new RelayCommand(() =>
+        {
+            CameraStatus = LabCameraHub.TryOpenWindowsCamera()
+                ? "Camera Windows deschisă — salvați poza, apoi Atașează imagine."
+                : "Nu s-a putut deschide Camera Windows.";
+            Status = CameraStatus;
+        });
+        CameraOpenFolderCommand = new RelayCommand(() =>
+        {
+            var folder = _camera?.EnsureSession() ?? AppPaths.EnsureWritable(AppPaths.Camera);
+            LabCameraHub.OpenFolder(folder);
+            CameraStatus = $"Folder cameră: {folder}";
+        });
+        CameraRefreshCommand = new RelayCommand(RefreshCameraShots);
+        CameraStartWatchCommand = new RelayCommand(() =>
+        {
+            _camera?.StartWatching(string.IsNullOrWhiteSpace(CameraWatchFolder) ? null : CameraWatchFolder);
+            CameraStatus = "Watch folder activ (imagini noi → sesiune).";
+            Status = CameraStatus;
+        });
+        CameraStopWatchCommand = new RelayCommand(() =>
+        {
+            _camera?.StopWatching();
+            CameraStatus = "Watch folder oprit.";
+        });
+        SaveIntegrationsCommand = new RelayCommand(() =>
+        {
+            ThirdPartyExporter.Save(_integrations);
+            IntegrationStatus = "Setări integrări salvate.";
+            Status = IntegrationStatus;
+            _journal.Setup(IntegrationStatus);
+        });
+        TestIntegrationsCommand = new RelayCommand(async () => await RunThirdPartyExportAsync(force: true));
+
+        RefreshCameraShots();
+    }
+
+    private void RefreshCameraShots()
+    {
+        CameraShots.Clear();
+        if (_camera is null) return;
+        foreach (var p in _camera.ListRecent())
+            CameraShots.Add(p);
+        CameraStatus = $"Cameră: {CameraShots.Count} imagini recente în {_camera.SnapshotRoot}";
+    }
+
+    private void AttachCameraImage()
+    {
+        if (_camera is null) return;
+        var dlg = new OpenFileDialog
+        {
+            Filter = "Imagini|*.jpg;*.jpeg;*.png;*.bmp;*.tif;*.tiff|All|*.*"
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var dest = _camera.AttachImage(dlg.FileName);
+            if (!CameraShots.Contains(dest))
+                CameraShots.Insert(0, dest);
+            CameraStatus = $"Atașat: {Path.GetFileName(dest)}";
+            Status = CameraStatus;
+            _journal.Info(CameraStatus);
+        }
+        catch (Exception ex)
+        {
+            CameraStatus = "Atașare eșuată: " + AppPaths.FriendlyIoMessage(ex, AppPaths.Camera);
+            Status = CameraStatus;
+        }
+    }
+
+    private void OnRecordingStartedForIntegrations(string csvPath)
+    {
+        if (_camera is null) return;
+        try
+        {
+            var folder = _camera.BeginSession(csvPath);
+            if (CameraWatchDuringRecord)
+            {
+                var watch = string.IsNullOrWhiteSpace(CameraWatchFolder) ? folder : CameraWatchFolder;
+                _camera.StartWatching(watch);
+                CameraStatus = $"Sesiune cameră: {folder}";
+            }
+        }
+        catch (Exception ex)
+        {
+            CameraStatus = AppPaths.FriendlyIoMessage(ex, AppPaths.Camera);
+            Status = CameraStatus;
+            _journal.Error(CameraStatus);
+        }
+    }
+
+    private async Task OnRecordingStoppedForIntegrationsAsync(string? csvPath)
+    {
+        _camera?.StopWatching();
+        var shots = _camera?.SessionShots.Count ?? 0;
+        if (shots > 0)
+            CameraStatus = $"Sesiune cameră închisă — {shots} snapshot(uri).";
+        _camera?.EndSession();
+
+        if (!string.IsNullOrWhiteSpace(csvPath))
+            await RunThirdPartyExportAsync(force: false, csvPath);
+    }
+
+    private async Task RunThirdPartyExportAsync(bool force, string? csvPath = null)
+    {
+        var path = csvPath ?? LastRecordingPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            IntegrationStatus = "Nicio înregistrare pentru export 3rd-party.";
+            if (force) Status = IntegrationStatus;
+            return;
+        }
+
+        if (!force && !_integrations.Enabled)
+            return;
+
+        var settings = force
+            ? new ThirdPartyExportSettings
+            {
+                Enabled = true,
+                OutboundFolder = _integrations.OutboundFolder,
+                WebhookUrl = _integrations.WebhookUrl,
+                CopyCsv = _integrations.CopyCsv,
+                PostMetadata = _integrations.PostMetadata
+            }
+            : _integrations;
+
+        try
+        {
+            var meta = new
+            {
+                product = "UPET AcqLab",
+                project = ProjectName,
+                sampleId = SampleId,
+                @operator = OperatorName,
+                comment = Comment,
+                backend = SelectedBackend,
+                file = path,
+                fileName = Path.GetFileName(path),
+                tags = MeasurementTags,
+                cameraShots = _camera?.SessionShots.ToArray() ?? Array.Empty<string>(),
+                exportedUtc = DateTime.UtcNow
+            };
+            var result = await ThirdPartyExporter.ExportAsync(settings, path, meta);
+            IntegrationStatus = result.Message;
+            Status = "3rd-party: " + result.Message;
+            _journal.Info(Status);
+        }
+        catch (Exception ex)
+        {
+            IntegrationStatus = "Export 3rd-party eșuat: " + ex.Message;
+            Status = IntegrationStatus;
+            _journal.Error(Status);
+        }
+    }
+}

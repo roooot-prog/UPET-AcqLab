@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>UPET AcqLab — Manual de utilizare 2.1 (procedură de laborator)</title>
+<style>
+  :root {
+    --upet-red: #C8102E;
+    --upet-blue: #0072C6;
+    --ink: #1a1f26;
+    --muted: #5a6573;
+    --line: #c8d0d8;
+    --panel: #f4f6f8;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Calibri", "Segoe UI", "DejaVu Sans", sans-serif;
+    line-height: 1.42;
+    background: #fff;
+  }
+  .page {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 14mm 16mm 18mm;
+  }
+  .cover {
+    border: 2px solid var(--upet-blue);
+    padding: 22mm 14mm 16mm;
+    text-align: center;
+    margin-bottom: 10mm;
+    page-break-after: always;
+    min-height: 235mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .cover-brand {
+    font-size: 11pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--upet-blue);
+    font-weight: 600;
+  }
+  .cover h1 {
+    margin: 14mm 0 4mm;
+    font-size: 28pt;
+    font-weight: 700;
+    color: var(--upet-blue);
+  }
+  .cover .subtitle {
+    font-size: 14pt;
+    margin: 0 0 6mm;
+  }
+  .cover .meta {
+    font-size: 11pt;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .cover .footer-line {
+    border-top: 1px solid var(--line);
+    padding-top: 6mm;
+    font-size: 10pt;
+    color: var(--muted);
+  }
+  .bar {
+    height: 5px;
+    background: linear-gradient(90deg, var(--upet-blue), var(--upet-red));
+    margin: 0 0 8mm;
+  }
+  h2 {
+    font-size: 13pt;
+    color: var(--upet-blue);
+    border-bottom: 1.5px solid var(--line);
+    padding-bottom: 2mm;
+    margin: 8mm 0 3mm;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11.5pt;
+    color: var(--ink);
+    margin: 5mm 0 2mm;
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 10.5pt;
+    margin: 3.5mm 0 1.5mm;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 2.5mm; }
+  ol, ul { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin: 0 0 1.2mm; }
+  ol.proc > li { margin-bottom: 1.8mm; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0 4mm;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 2mm 2.5mm;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel);
+    font-weight: 600;
+  }
+  code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9.5pt;
+  }
+  .box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 3mm 3.5mm;
+    margin: 2mm 0 4mm;
+  }
+  .note {
+    border-left: 3px solid var(--upet-red);
+    padding: 2mm 0 2mm 3mm;
+    margin: 2mm 0 4mm;
+    color: var(--ink);
+  }
+  .toc ol { padding-left: 6mm; }
+  .toc li { margin-bottom: 1mm; }
+  pre.flow {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 3mm;
+    font-family: Consolas, monospace;
+    font-size: 9pt;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  .footer-doc {
+    margin-top: 10mm;
+    padding-top: 3mm;
+    border-top: 1px solid var(--line);
+    font-size: 9.5pt;
+    color: var(--muted);
+  }
+  @media print {
+    body { background: #fff; }
+    .page { max-width: none; padding: 0; }
+    a { color: inherit; text-decoration: none; }
+    h2 { break-after: avoid; }
+    .cover { break-after: page; }
+  }
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <section class="cover">
+    <div>
+      <div class="cover-brand">Universitatea din Petroșani</div>
+      <div class="bar"></div>
+      <h1>UPET AcqLab</h1>
+      <p class="subtitle">Manual de utilizare</p>
+      <p class="subtitle" style="font-size:12pt;color:var(--muted)">Procedură de laborator — de la instalare la finalizarea măsurătorii</p>
+    </div>
+    <div class="meta">
+      Versiune software: <strong>2.1</strong><br/>
+      Titular licență: <strong>dr.ing. Vilceanu</strong><br/>
+      Document: procedură pas cu pas (instructaj de lucru)
+    </div>
+    <div class="footer-line">
+      Laborator — achiziție semnale Spider8 / Simulator<br/>
+      Universitatea din Petroșani
+    </div>
+  </section>
+
+  <h2>Cuprins</h2>
+  <div class="toc">
+    <ol>
+      <li>Pregătire PC / ce este necesar</li>
+      <li>Instalare</li>
+      <li>Prima pornire și activare licență</li>
+      <li>Orientare în interfață</li>
+      <li>Configurare proiect (operator, sample, comentariu)</li>
+      <li>Alegere backend (Simulator / Serial / Spider32.dll)</li>
+      <li>Connect — verificare stare</li>
+      <li>Canale — activare, unități, senzori, Apply</li>
+      <li>Tare / Preflight / Shunt</li>
+      <li>Setări înregistrare (Record)</li>
+      <li>Start streaming — verificare valori live</li>
+      <li>Record → Stop rec — fișier CSV</li>
+      <li>Oprire streaming / Disconnect</li>
+      <li>Analysis</li>
+      <li>Salvare proiect .s8proj</li>
+      <li>Export raport (HTML / PDF / Excel)</li>
+      <li>Finalizare totală — checklist închidere sesiune</li>
+      <li>Depanare</li>
+    </ol>
+  </div>
+
+  <h2>1. Pregătire PC / ce este necesar</h2>
+
+  <h3>1.1. Cerințe minime</h3>
+  <table>
+    <tr><th>Element</th><th>Cerință</th></tr>
+    <tr><td>Sistem de operare</td><td>Windows 10 sau Windows 11</td></tr>
+    <tr><td>Arhitectură pachet</td><td>win-x86 (self-contained); runtime .NET inclus</td></tr>
+    <tr><td>Drepturi Administrator</td><td>necesare pentru instalare cu setup și pentru drivere USB/COM</td></tr>
+    <tr><td>Spațiu disc</td><td>minim ~200 MB pentru aplicație + folder <span class="mono">recordings</span></td></tr>
+    <tr><td>Hardware (opțional)</td><td>Spider8 + adaptor USB–serial (FTDI, CH340, CP210x, PL2303 etc.)</td></tr>
+  </table>
+  <p>Fără aparat fizic se lucrează cu backend-ul <strong>Simulator</strong>.</p>
+
+  <h3>1.2. Materiale înainte de start</h3>
+  <ol class="proc">
+    <li>Arhiva de distribuție: <span class="mono">UPET-AcqLab-Portable.zip</span> (sau pachetul <span class="mono">dist\</span> din laborator).</li>
+    <li>Cheia de licență (vezi cap. 3).</li>
+    <li>Dacă se măsoară pe hardware: cablu USB–serial, Spider8 alimentat, port COM vizibil în Device Manager.</li>
+    <li>Opțional, pentru backend DLL: fișierul <span class="mono">Spider32.dll</span> din pachetul oficial HBM (nu este redistribuit de UPET AcqLab).</li>
+  </ol>
+
+  <h3>1.3. Verificări pe PC</h3>
+  <ol class="proc">
+    <li>Deconectați temporar alte programe care pot bloca portul COM (terminale seriale, alte DAQ).</li>
+    <li>Notați calea unde veți păstra proiectele <span class="mono">.s8proj</span> și unde vor apărea CSV-urile (folderul <span class="mono">recordings</span> lângă executabil).</li>
+    <li>Pentru instalare cu setup: cont cu drepturi de Administrator.</li>
+  </ol>
+
+  <h2>2. Instalare</h2>
+  <p>Există două variante: <strong>instalare cu Setup</strong> (recomandată pe stațiile de laborator) și <strong>rulare portabilă</strong> din folderul extras.</p>
+
+  <h3>2.1. Varianta A — din ZIP pe Desktop (recomandat)</h3>
+  <ol class="proc">
+    <li>Copiați <span class="mono">UPET-AcqLab-Portable.zip</span> pe Desktop.</li>
+    <li>Clic dreapta pe arhivă → <strong>Extract All…</strong> (sau Extrage) într-un folder, de exemplu:<br/>
+      <span class="mono">C:\Users\&lt;utilizator&gt;\Desktop\UPET-AcqLab</span></li>
+    <li>Deschideți folderul extras. Verificați prezența fișierelor:
+      <ul>
+        <li><span class="mono">UPETAcqLab.exe</span></li>
+        <li><span class="mono">Setup.cmd</span> (sau, în pachetul <span class="mono">dist\</span>, <span class="mono">UPETAcqLab-Setup.cmd</span>)</li>
+      </ul>
+    </li>
+    <li>Alegeți una din cele două căi de mai jos.</li>
+  </ol>
+
+  <h4>2.1.1. Instalare cu Setup (Administrator)</h4>
+  <ol class="proc">
+    <li>Clic dreapta pe <span class="mono">Setup.cmd</span> / <span class="mono">UPETAcqLab-Setup.cmd</span> → <strong>Run as administrator</strong> (Rulează ca administrator).</li>
+    <li>Confirmați UAC dacă apare.</li>
+    <li>Așteptați copierea fișierelor și, dacă scriptul include drivere, instalarea pachetelor USB/COM din distribuție.</li>
+    <li>La final, aplicația este instalată tipic în:<br/><span class="mono">C:\Program Files (x86)\UPET AcqLab\</span></li>
+    <li>Pe Desktop (și în meniul Start) apare scurtătura <strong>UPET AcqLab</strong> → <span class="mono">UPETAcqLab.exe</span>.</li>
+    <li>Jurnale de instalare (dacă setup-ul le scrie):<br/><span class="mono">%ProgramData%\UPETAcqLab\</span> (<span class="mono">setup.log</span>, <span class="mono">driver-install.log</span>).</li>
+  </ol>
+
+  <h4>2.1.2. Rulare directă (fără instalare în Program Files)</h4>
+  <ol class="proc">
+    <li>Din folderul extras, dublați clic pe <span class="mono">UPETAcqLab.exe</span>.</li>
+    <li>Alternativ, rulați <span class="mono">Setup.cmd</span> din același folder dacă acesta doar lansează executabilul (comportament pachet portabil).</li>
+    <li>În această variantă, aplicația rulează din folderul extras; înregistrările CSV se creează în subfolderul <span class="mono">recordings</span> al acelui folder.</li>
+  </ol>
+
+  <h3>2.2. Varianta B — din folderul dist\</h3>
+  <ol class="proc">
+    <li>Deschideți <span class="mono">dist\</span>.</li>
+    <li>Rulați ca Administrator <span class="mono">UPETAcqLab-Setup.cmd</span>.</li>
+    <li>Locație instalare: <span class="mono">C:\Program Files (x86)\UPET AcqLab\</span>.</li>
+    <li>Pornire: scurtătura Desktop <strong>UPET AcqLab</strong>.</li>
+  </ol>
+
+  <h3>2.3. Spider32.dll (opțional)</h3>
+  <ol class="proc">
+    <li>Obțineți <span class="mono">Spider32.dll</span> din pachetul oficial HBM.</li>
+    <li>Copiați-l în: <span class="mono">C:\Program Files (x86)\UPET AcqLab\vendor\Spider32.dll</span> (sau în <span class="mono">vendor\</span> din folderul portabil).</li>
+    <li>Instalatorul UPET AcqLab <strong>nu</strong> redistribuie DLL-uri proprietare HBM.</li>
+  </ol>
+
+  <h3>2.4. După instalare — verificare rapidă</h3>
+  <ol class="proc">
+    <li>Există scurtătura <strong>UPET AcqLab</strong> pe Desktop <strong>sau</strong> <span class="mono">UPETAcqLab.exe</span> în folderul de lucru.</li>
+    <li>Nu este necesară instalarea separată a .NET Desktop Runtime (pachet self-contained).</li>
+  </ol>
+
+  <h2>3. Prima pornire și activare licență</h2>
+
+  <h3>3.1. Lansare</h3>
+  <ol class="proc">
+    <li>Porniți aplicația din scurtătura Desktop <strong>UPET AcqLab</strong> sau din <span class="mono">UPETAcqLab.exe</span>.</li>
+    <li>Titlul ferestrei principale (după activare): <em>UPET AcqLab — Universitatea din Petroșani</em>.</li>
+  </ol>
+
+  <h3>3.2. Fereastra de activare (primul start)</h3>
+  <p>Dacă licența nu este încă salvată local, apare fereastra <strong>Activare licență — UPET AcqLab</strong>.</p>
+  <ol class="proc">
+    <li>În câmpul <strong>Nume titular</strong> introduceți <strong>exact</strong>:<br/><span class="mono">dr.ing. Vilceanu</span></li>
+    <li>În câmpul <strong>Cheie licență</strong> introduceți <strong>exact</strong>:<br/><span class="mono">UPET-ACQLAB-XH3T-2AAA-QKN2-NGST</span></li>
+    <li>Apăsați <strong>Activează</strong>.</li>
+    <li>Dacă datele sunt corecte, fereastra se închide și se deschide interfața principală.</li>
+  </ol>
+  <div class="note"><strong>Atenție:</strong> ortografia numelui și formatul cheii trebuie să coincidă caracter cu caracter (fără spații în plus, fără variante de scriere).</div>
+
+  <h3>3.3. Unde se salvează licența</h3>
+  <table>
+    <tr><th>Element</th><th>Valoare</th></tr>
+    <tr><td>Fișier</td><td><span class="mono">%LocalAppData%\UPETAcqLab\license.dat</span></td></tr>
+    <tr><td>Tip</td><td>licență personală, fără dată de expirare</td></tr>
+    <tr><td>Titular</td><td>dr.ing. Vilceanu</td></tr>
+  </table>
+
+  <h3>3.4. Dacă licența este deja activată</h3>
+  <ol class="proc">
+    <li>La următoarele porniri, dacă <span class="mono">license.dat</span> este prezent și valid, <strong>nu</strong> se mai afișează fereastra de activare.</li>
+    <li>Aplicația deschide direct fereastra principală.</li>
+    <li>Dacă fișierul lipsește sau este corupt, fereastra de activare reapare — reintroduceți titularul și cheia ca la 3.2.</li>
+  </ol>
+
+  <h3>3.5. Dacă activarea eșuează</h3>
+  <ol class="proc">
+    <li>Verificați că numele este exact <span class="mono">dr.ing. Vilceanu</span>.</li>
+    <li>Verificați cheia: <span class="mono">UPET-ACQLAB-XH3T-2AAA-QKN2-NGST</span>.</li>
+    <li>Nu apăsați <strong>Ieșire</strong> dacă doriți să continuați — fără licență validă aplicația nu pornește.</li>
+  </ol>
+
+  <h2>4. Orientare în interfață</h2>
+  <p>Lucrați cu aplicația deschisă. Identificați zonele de mai jos înainte de măsurătoare.</p>
+
+  <h3>4.1. Bara de sus (ribbon / antet)</h3>
+  <p>În partea de sus a ferestrei: logo UPET, text <strong>UNIVERSITATEA DIN PETROȘANI</strong>, titlu <strong>UPET AcqLab</strong>, numele proiectului curent; butoane <strong>Info</strong>, casetă <strong>Panel</strong>, <strong>Salvează</strong>, <strong>Încarcă</strong>, <strong>Excel</strong>, <strong>TXT</strong>, <strong>MAT</strong>, <strong>DIAdem</strong>, <strong>HTML</strong>, <strong>PDF</strong>, <strong>Replay</strong>.</p>
+
+  <h3>4.2. Banda de comandă dispozitiv</h3>
+  <table>
+    <tr><th>Control</th><th>Rol</th></tr>
+    <tr><td>Combo Dispozitiv (backend)</td><td>Simulator / Serial / Spider32.dll</td></tr>
+    <tr><td>Combo port COM</td><td>selectare COMx (relevant pentru Serial)</td></tr>
+    <tr><td><strong>Porturi</strong></td><td>reîmprospătare listă COM</td></tr>
+    <tr><td>Câmp rată Hz</td><td>rată de eșantionare</td></tr>
+    <tr><td><strong>Connect</strong></td><td>conectare</td></tr>
+    <tr><td><strong>Disconnect</strong></td><td>deconectare</td></tr>
+    <tr><td><strong>Start</strong></td><td>pornire streaming</td></tr>
+    <tr><td><strong>Stop</strong></td><td>oprire streaming</td></tr>
+    <tr><td><strong>Tare</strong></td><td>tare pe toate canalele</td></tr>
+    <tr><td><strong>Record</strong></td><td>pornire înregistrare CSV</td></tr>
+    <tr><td><strong>Stop rec</strong></td><td>oprire înregistrare</td></tr>
+    <tr><td><strong>Macro</strong></td><td>rulează macro din tab-ul Macros</td></tr>
+    <tr><td>Combo Experiment</td><td>preset tip experiment</td></tr>
+  </table>
+
+  <h3>4.3. Tab-uri principale</h3>
+  <table>
+    <tr><th>Tab</th><th>Conținut</th></tr>
+    <tr><td><strong>Măsurare</strong></td><td>Meta, canale, senzori, math, afișaj, setări record, grafice live</td></tr>
+    <tr><td><strong>Bibliotecă senzori</strong></td><td>editare / import / export senzori, Apply pe canal</td></tr>
+    <tr><td><strong>Job măsurătoare</strong></td><td>checklist ghidat, tare+record job, raport</td></tr>
+    <tr><td><strong>Analysis</strong></td><td>încărcare CSV, cursoare, prelucrări, export</td></tr>
+    <tr><td><strong>Devices</strong></td><td>dispozitive multiple / COM</td></tr>
+    <tr><td><strong>Macros</strong></td><td>pași automatizați</td></tr>
+    <tr><td><strong>Calib / Wiring</strong></td><td>calibrare, schema cablare</td></tr>
+    <tr><td><strong>DataViewer</strong></td><td>browser înregistrări</td></tr>
+    <tr><td><strong>Alarms / Trigger / Compute</strong></td><td>alarme, trigger avansat, compute</td></tr>
+  </table>
+
+  <h3>4.4. Bara de stare (jos)</h3>
+  <p>În banda galbenă de jos: text de ajutor (Info contextual); linia <strong>Status</strong> (stare conectare, streaming, înregistrare, erori); text cursor. Urmăriți permanent linia <strong>Status</strong> după fiecare acțiune.</p>
+
+  <h3>4.5. Scurtături tastatură</h3>
+  <table>
+    <tr><th>Tastă</th><th>Acțiune</th></tr>
+    <tr><td>F5</td><td>Start</td></tr>
+    <tr><td>F6</td><td>Stop</td></tr>
+    <tr><td>F7</td><td>Record</td></tr>
+    <tr><td>F8</td><td>Stop rec</td></tr>
+    <tr><td>F9</td><td>Tare</td></tr>
+    <tr><td>F11</td><td>Panel</td></tr>
+  </table>
+
+  <h2>5. Configurare proiect (operator, sample, comentariu)</h2>
+  <ol class="proc">
+    <li>Deschideți tab-ul <strong>Măsurare</strong>.</li>
+    <li>În panoul stâng, secțiunea <strong>Meta</strong>:
+      <ul>
+        <li>primul câmp (tooltip Operator): numele operatorului;</li>
+        <li>al doilea câmp (tooltip Sample): identificator probă / măsurătoare;</li>
+        <li>câmpul numeric + eticheta <strong>s max</strong>: durată maximă record (MaxSeconds);</li>
+        <li>câmpul de jos (tooltip Comment): comentariu liber.</li>
+      </ul>
+    </li>
+    <li>Completați cel puțin Operator și Sample înainte de Record.</li>
+    <li>Alternativ, aceleași câmpuri pot fi completate în tab-ul <strong>Job măsurătoare</strong>.</li>
+  </ol>
+  <div class="box">
+    Exemplu tipic — Operator: <span class="mono">Vilceanu</span>; Sample: <span class="mono">proba_01</span>; Comment: <span class="mono">încărcare statică, 20 °C</span>
+  </div>
+
+  <h2>6. Alegere backend: Simulator / Serial / Spider32.dll</h2>
+  <p>În banda <strong>Dispozitiv</strong>, selectați backend-ul înainte de <strong>Connect</strong>.</p>
+
+  <h3>6.1. Simulator (test / fără aparat)</h3>
+  <ol class="proc">
+    <li>Selectați <strong>Simulator</strong> în combo-ul de backend.</li>
+    <li>Portul COM nu este necesar.</li>
+    <li>Setați rata de eșantionare (Hz) dacă procedura o cere.</li>
+    <li>Continuați cu cap. 7 (Connect).</li>
+  </ol>
+
+  <h3>6.2. Serial (COM — Spider8 pe USB–serial)</h3>
+  <ol class="proc">
+    <li>Conectați adaptorul USB–serial și alimentați Spider8.</li>
+    <li>Apăsați <strong>Porturi</strong> pentru a reîmprospăta lista.</li>
+    <li>Selectați backend <strong>Serial</strong>.</li>
+    <li>Alegeți portul corect (ex. COM3).</li>
+    <li>Parametri tipici în aplicație: 9600 baud, 8E1.</li>
+    <li>Continuați cu Connect.</li>
+  </ol>
+
+  <h3>6.3. Spider32.dll</h3>
+  <ol class="proc">
+    <li>Verificați că există <span class="mono">vendor\Spider32.dll</span> în folderul de instalare.</li>
+    <li>Selectați <strong>Spider32.dll</strong>.</li>
+    <li>Continuați cu Connect.</li>
+  </ol>
+
+  <h2>7. Connect — verificare stare</h2>
+  <ol class="proc">
+    <li>Apăsați <strong>Connect</strong>.</li>
+    <li>Urmăriți linia <strong>Status</strong> din partea de jos: trebuie să indice stare de conectat (fără mesaj de eroare).</li>
+    <li>Dacă Connect eșuează:
+      <ul>
+        <li>Serial: port greșit, driver lipsă, aparat oprit, COM ocupat;</li>
+        <li>Spider32.dll: DLL lipsă sau bitness greșit (necesar x86);</li>
+        <li>Simulator: reîncercați; dacă persistă, reporniți aplicația.</li>
+      </ul>
+    </li>
+    <li>Nu treceți la <strong>Start</strong> până când Status confirmă conexiunea.</li>
+  </ol>
+
+  <h2>8. Canale: enable, unități, senzori din bibliotecă, Apply</h2>
+  <p>Lucrați în tab-ul <strong>Măsurare</strong>, panoul <strong>Channels (bridge/range/filter/alarm)</strong>.</p>
+
+  <h3>8.1. Activare și parametri canal</h3>
+  <ol class="proc">
+    <li>În tabelul de canale, bifați <strong>On</strong> pentru canalele folosite.</li>
+    <li>Completați după nevoie: <strong>Name</strong>, <strong>Unit</strong>, <strong>Bridge</strong>, <strong>Range</strong>, <strong>Filt</strong>, <strong>Scale</strong>; opțional alarme <strong>Alm</strong>, <strong>Lo</strong>, <strong>Hi</strong>.</li>
+  </ol>
+
+  <h3>8.2. Aplicare senzor din bibliotecă (în Măsurare)</h3>
+  <ol class="proc">
+    <li>În panoul de senzori (arbore pe categorii), alegeți categoria sau folosiți căutarea (cod / nume).</li>
+    <li>Selectați senzorul (ex. cod tip <span class="mono">FOR-0001</span>).</li>
+    <li>În câmpul <strong>CH#</strong> introduceți numărul canalului (1-based).</li>
+    <li>Apăsați <strong>Apply → CH</strong>.</li>
+    <li>Pentru toate canalele activate: <strong>Apply all On</strong>.</li>
+  </ol>
+
+  <h3>8.3. Tab Bibliotecă senzori (opțional)</h3>
+  <ol class="proc">
+    <li>Deschideți <strong>Bibliotecă senzori</strong>.</li>
+    <li>Folosiți Reload / Save / Import / Export / Add custom după nevoie.</li>
+    <li>Selectați senzorul → <strong>Apply → CH</strong> sau <strong>Apply all On</strong>.</li>
+  </ol>
+
+  <h3>8.4. Verificare</h3>
+  <ol class="proc">
+    <li>Verificați că Name, Unit și Scale reflectă senzorul aplicat.</li>
+    <li>Canalele nefolosite: debifați On.</li>
+  </ol>
+
+  <h2>9. Tare / Preflight / Shunt — ce și când</h2>
+  <p>Acțiunile de mai jos necesită dispozitiv conectat. Pentru tare/shunt pe date live, streaming-ul trebuie să fie pornit sau pe cale să fie pornit, după procedura laboratorului.</p>
+  <table>
+    <tr><th>Acțiune</th><th>Unde</th><th>Când</th></tr>
+    <tr><td><strong>Tare</strong> (ribbon)</td><td>banda de sus</td><td>zeroing pe toate canalele, înainte de Record</td></tr>
+    <tr><td><strong>Tare CH</strong></td><td>panoul Channels</td><td>tare doar pe canalul selectat (CH#)</td></tr>
+    <tr><td><strong>Shunt CH</strong> / <strong>Shunt all</strong></td><td>panoul Channels</td><td>verificare shunt / semnal de referință</td></tr>
+    <tr><td><strong>Preflight</strong></td><td>Channels sau Job</td><td>verificare (tare + shunt); rezultate în lista Preflight</td></tr>
+  </table>
+
+  <h3>Procedură tipică înainte de înregistrare</h3>
+  <ol class="proc">
+    <li><strong>Connect</strong> → <strong>Start</strong> (streaming).</li>
+    <li>Așteptați stabilizarea valorilor pe grafic.</li>
+    <li>Apăsați <strong>Tare</strong> (sau <strong>Tare CH</strong> pe canalul de interes).</li>
+    <li>Opțional: <strong>Preflight</strong> și citiți liniile din listă.</li>
+    <li>Opțional: <strong>Shunt CH</strong> / <strong>Shunt all</strong> dacă procedura de laborator cere verificarea shunt.</li>
+    <li>Continuați cu setările de Record (cap. 10).</li>
+  </ol>
+
+  <h2>10. Setări record (Manual / Duration / Samples / Trigger, MaxSeconds)</h2>
+  <p>În tab-ul <strong>Măsurare</strong>, secțiunea <strong>Oprire înregistrare</strong>:</p>
+  <ol class="proc">
+    <li>Selectați modul din combo:
+      <ul>
+        <li><strong>Manual</strong> — oprire doar cu Stop rec;</li>
+        <li><strong>Duration</strong> — se oprește după MaxSeconds;</li>
+        <li><strong>Samples</strong> — se oprește după MaxSamples;</li>
+        <li><strong>Trigger</strong> — înregistrare armată pe trigger de nivel.</li>
+      </ul>
+    </li>
+    <li>Completați MaxSeconds (și/sau câmpul s max din Meta) și MaxSamples (pentru modul Samples).</li>
+    <li>Opțiuni utile: Stats journal + interval; Stop on alarm; Level trigger / Rising / PreTrig; Append; Auto name.</li>
+    <li>Pentru măsurători standard de laborator, începeți cu Manual sau Duration + MaxSeconds cunoscut.</li>
+  </ol>
+
+  <h2>11. Start streaming — verificare valori live / plot</h2>
+  <ol class="proc">
+    <li>Asigurați-vă că sunteți pe tab-ul <strong>Măsurare</strong>.</li>
+    <li>Apăsați <strong>Start</strong> (sau F5).</li>
+    <li>Verificați Status: streaming activ.</li>
+    <li>Pe graficele din dreapta urmăriți curbele canalelor activate.</li>
+    <li>Verificați că valorile au sens (unități, ordin de mărime, fără saturări evidente).</li>
+    <li>Ajustați tipul de afișaj din <strong>Afișaj / tip grafic</strong> dacă e nevoie (Y(t), Dual Y(t), Y(X), Numeric, Bar, FFT).</li>
+    <li>Dacă valorile sunt greșite: Stop → reveniți la canale/senzori (cap. 8), tare (cap. 9), apoi Start din nou.</li>
+  </ol>
+  <div class="note"><strong>Important:</strong> Record nu pornește dacă streaming-ul nu este activ. Mesaj tipic: <em>Start streaming before recording.</em></div>
+
+  <h2>12. Record → Stop record → unde este CSV</h2>
+
+  <h3>12.1. Pornire înregistrare</h3>
+  <ol class="proc">
+    <li>Cu streaming activ, apăsați <strong>Record</strong> (sau F7).</li>
+    <li>Dacă Auto name este bifat, fișierul se creează automat în folderul <span class="mono">recordings</span>.</li>
+    <li>Dacă Auto name este debifat, alegeți calea în dialogul de salvare.</li>
+    <li>Status afișează modul și calea, de exemplu:<br/>
+      <span class="mono">Înregistrare (stop manual): …\recordings\proba_01_20260725_103015.csv</span></li>
+  </ol>
+
+  <h3>12.2. Oprire înregistrare</h3>
+  <ol class="proc">
+    <li>În modul Manual: apăsați <strong>Stop rec</strong> (sau F8) când măsurătoarea s-a încheiat.</li>
+    <li>În Duration / Samples / Trigger: înregistrarea se poate opri automat; verificați Status.</li>
+    <li>Notați calea fișierului din Status.</li>
+  </ol>
+
+  <h3>12.3. Unde se află CSV-ul</h3>
+  <p>Folderul implicit: <span class="mono">&lt;folderul_aplicației&gt;\recordings\</span></p>
+  <ul>
+    <li>Instalare tipică: <span class="mono">C:\Program Files (x86)\UPET AcqLab\recordings\</span></li>
+    <li>Rulare portabilă: <span class="mono">…\Desktop\UPET-AcqLab\recordings\</span></li>
+  </ul>
+  <p>Nume tipic (Auto name): <span class="mono">&lt;Sample&gt;_yyyyMMdd_HHmmss.csv</span>. Opțional: jurnal statistici <span class="mono">*_stats.csv</span> dacă Stats journal a fost activ.</p>
+
+  <h3>12.4. Verificare rapidă</h3>
+  <ol class="proc">
+    <li>Deschideți tab-ul <strong>DataViewer</strong> → <strong>Refresh</strong>.</li>
+    <li>Selectați fișierul → <strong>Open in Analysis</strong> (sau continuați la cap. 14 cu Load CSV).</li>
+  </ol>
+
+  <h2>13. Oprire streaming / Disconnect</h2>
+  <ol class="proc">
+    <li>Dacă încă înregistrați: <strong>Stop rec</strong>.</li>
+    <li><strong>Stop</strong> (oprire streaming) sau F6.</li>
+    <li><strong>Disconnect</strong>.</li>
+    <li>Verificați Status: deconectat / idle, fără erori.</li>
+  </ol>
+  <p>Nu închideți fereastra aplicației în timp ce Record este activ — opriți mai întâi înregistrarea.</p>
+
+  <h2>14. Analysis: Load CSV, cursoare, smooth / fit / FFT, export</h2>
+  <ol class="proc">
+    <li>Deschideți tab-ul <strong>Analysis</strong>.</li>
+    <li>Apăsați <strong>Load CSV</strong> și selectați înregistrarea din <span class="mono">recordings</span> (sau DataViewer → Open in Analysis).</li>
+    <li>Selectați canalul (CH).</li>
+    <li>Pe graficul Analysis folosiți zoom / pan; urmăriți textul cursorului din bara de jos.</li>
+    <li>Prelucrări, după caz: Smooth; Cut; Peaks; ∫ Integral; d/dt; Outliers; LPF; Scale/Off → Apply; Fit Y(X); FFT regiune; Export spectru; adnotări Add @ / Clear.</li>
+    <li>Consultați tabelul de statistici (Min, Max, Mean, σ, RMS, P2P).</li>
+    <li>Export din Analysis: Save CSV, Export region, TXT, MAT, Excel.</li>
+  </ol>
+
+  <h2>15. Salvare proiect .s8proj</h2>
+  <p>Proiectul păstrează configurația (backend, canale, meta, setări), nu înlocuiește CSV-ul brut.</p>
+  <ol class="proc">
+    <li>În antet, apăsați <strong>Salvează</strong>.</li>
+    <li>Alegeți calea și numele fișierului (extensie <span class="mono">.s8proj</span>).</li>
+    <li>Pentru reluare ulterioară: <strong>Încarcă</strong> și selectați același <span class="mono">.s8proj</span>.</li>
+    <li>Opțional, din Job măsurătoare: <strong>Încarcă exemplu</strong> pentru un proiect demo.</li>
+  </ol>
+  <p>Salvați proiectul după ce configurația de canale/senzori este stabilă și după măsurătoare, înainte de închiderea sesiunii.</p>
+
+  <h2>16. Export raport HTML / PDF / Excel</h2>
+  <table>
+    <tr><th>Buton</th><th>Rezultat</th></tr>
+    <tr><td><strong>HTML</strong></td><td>raport HTML pe măsurătoare</td></tr>
+    <tr><td><strong>PDF</strong></td><td>raport PDF</td></tr>
+    <tr><td><strong>Excel</strong></td><td>export .xlsx</td></tr>
+    <tr><td>TXT / MAT / DIAdem</td><td>exporturi alternative</td></tr>
+  </table>
+  <ol class="proc">
+    <li>Asigurați-vă că există o înregistrare recentă (sau sesiune încărcată în Analysis).</li>
+    <li>Completați Meta (Operator, Sample, Comment) — apar în raport.</li>
+    <li>Apăsați HTML și/sau PDF și alegeți locația de salvare.</li>
+    <li>Pentru tabele de lucru: Excel.</li>
+    <li>Verificați că fișierele există pe disc.</li>
+  </ol>
+  <p>Din <strong>Job măsurătoare</strong>: Raport HTML, Export PDF.</p>
+
+  <h2>17. Finalizare totală — checklist închidere sesiune</h2>
+  <p>Parcurgeți lista <strong>în ordine</strong>, cu aplicația încă deschisă:</p>
+  <table>
+    <tr><th>#</th><th>Acțiune</th><th>Verificare</th></tr>
+    <tr><td>1</td><td><strong>Stop rec</strong> dacă Record era activ</td><td>Status nu mai indică înregistrare</td></tr>
+    <tr><td>2</td><td><strong>Stop</strong> streaming</td><td>Status: streaming oprit</td></tr>
+    <tr><td>3</td><td><strong>Disconnect</strong></td><td>Status: deconectat</td></tr>
+    <tr><td>4</td><td><strong>Salvează</strong> proiect .s8proj</td><td>fișier pe disc</td></tr>
+    <tr><td>5</td><td>Notați / copiați CSV din <span class="mono">recordings\</span></td><td>calea cunoscută</td></tr>
+    <tr><td>6</td><td>Export HTML / PDF / Excel dacă laboratorul cere raport</td><td>fișiere pe disc</td></tr>
+    <tr><td>7</td><td>(Opțional) Analysis pe CSV — smooth/fit/FFT și export</td><td>rezultate salvate</td></tr>
+    <tr><td>8</td><td>Închideți fereastra aplicației (X)</td><td>sesiune închisă</td></tr>
+  </table>
+
+  <h3>Unde sunt fișierele (recapitulare)</h3>
+  <table>
+    <tr><th>Tip</th><th>Locație tipică</th></tr>
+    <tr><td>Aplicație instalată</td><td><span class="mono">C:\Program Files (x86)\UPET AcqLab\</span></td></tr>
+    <tr><td>Scurtătură</td><td>Desktop → UPET AcqLab</td></tr>
+    <tr><td>Licență</td><td><span class="mono">%LocalAppData%\UPETAcqLab\license.dat</span></td></tr>
+    <tr><td>CSV măsurători</td><td><span class="mono">&lt;instalare_sau_folder_portabil&gt;\recordings\</span></td></tr>
+    <tr><td>Proiect</td><td>calea aleasă la Salvează (.s8proj)</td></tr>
+    <tr><td>Rapoarte</td><td>calea aleasă la export HTML/PDF/Excel</td></tr>
+    <tr><td>Log setup</td><td><span class="mono">%ProgramData%\UPETAcqLab\</span></td></tr>
+  </table>
+  <p>Sesiunea este considerată <strong>finalizată</strong> doar după oprirea Record/Stream, Disconnect, salvare proiect (dacă e cazul) și confirmarea locației fișierelor.</p>
+
+  <h2>18. Depanare</h2>
+  <table>
+    <tr><th>Simptom</th><th>Ce faceți</th></tr>
+    <tr><td>Aplicația cere cheia la fiecare start</td><td>Verificați <span class="mono">%LocalAppData%\UPETAcqLab\license.dat</span>. Reintroduceți titularul și cheia exact.</td></tr>
+    <tr><td>Aplicația <strong>nu</strong> cere cheia</td><td>Licența este deja activă — comportament normal. Continuați cu măsurătoarea.</td></tr>
+    <tr><td>Licență respinsă</td><td>Titular exact: <span class="mono">dr.ing. Vilceanu</span>. Cheie: <span class="mono">UPET-ACQLAB-XH3T-2AAA-QKN2-NGST</span>.</td></tr>
+    <tr><td>Nu apare port COM</td><td>Driver USB–serial; cablu; Device Manager; buton Porturi.</td></tr>
+    <tr><td>Connect eșuează (Serial)</td><td>Port greșit; aparat oprit; alt program ține COM-ul; baud/protocol.</td></tr>
+    <tr><td>Connect eșuează (Spider32.dll)</td><td>Lipsește <span class="mono">vendor\Spider32.dll</span>; verificați instalarea x86.</td></tr>
+    <tr><td>Record inactiv / mesaj streaming</td><td>Faceți Start, apoi Record.</td></tr>
+    <tr><td>CSV negăsit</td><td>Căutați în <span class="mono">recordings</span> lângă UPETAcqLab.exe; verificați Status la Record.</td></tr>
+    <tr><td>Setup eșuează</td><td>Rulați ca Administrator; citiți <span class="mono">%ProgramData%\UPETAcqLab\setup.log</span>.</td></tr>
+    <tr><td>Valorile live nu au sens</td><td>Canale On, Scale/Unit, senzor Apply, Tare, backend corect.</td></tr>
+    <tr><td>Shortcut Desktop lipsește</td><td>Recreați din UPETAcqLab.exe (Send to → Desktop) sau reluați Setup ca Admin.</td></tr>
+  </table>
+
+  <h2>Anexă A — date licență (referință)</h2>
+  <pre class="flow">Produs   : UPET AcqLab
+Titular  : dr.ing. Vilceanu
+Cheie    : UPET-ACQLAB-XH3T-2AAA-QKN2-NGST
+Expiră   : perpetuă
+Fișier   : %LocalAppData%\UPETAcqLab\license.dat</pre>
+
+  <h2>Anexă B — flux scurt (ordine operațională)</h2>
+  <pre class="flow">Pregătire PC
+  → Instalare / lansare EXE
+  → Activare licență (dacă e nevoie)
+  → Meta (Operator, Sample, Comment)
+  → Backend → Connect
+  → Canale + senzori Apply
+  → Start → Tare / Preflight / Shunt
+  → Setări Record
+  → Record → Stop rec
+  → Stop → Disconnect
+  → Analysis (opțional)
+  → Salvează .s8proj
+  → Export HTML/PDF/Excel
+  → Checklist finalizare → închidere aplicație</pre>
+
+  <div class="footer-doc">
+    Universitatea din Petroșani — UPET AcqLab, manual de utilizare (procedură de laborator), versiunea 2.1<br/>
+    Responsabil: dr.ing. Vilceanu
+  </div>
+
+</div>
+</body>
+</html>

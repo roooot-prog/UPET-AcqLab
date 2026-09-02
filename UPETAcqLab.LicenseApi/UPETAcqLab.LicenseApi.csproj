@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>UPETAcqLab.LicenseApi</RootNamespace>
+    <AssemblyName>UPETAcqLab.LicenseApi</AssemblyName>
+    <Authors>drd. ing. Iucal Ilie</Authors>
+    <Company>Universitatea din Petrosani</Company>
+    <Product>UPET AcqLab License API</Product>
+    <Description>API local de chei aplicație și activări (IP văzut de server) pentru UPET AcqLab.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+  </ItemGroup>
+</Project>

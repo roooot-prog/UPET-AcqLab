@@ -1,0 +1,33 @@
+﻿UPET AcqLab
+Universitatea din Petroșani
+Pachet portabil (Windows, win-x86, self-contained)
+
+Pornire
+-------
+1. Extrage arhiva într-un folder (ex. Desktop\UPET-AcqLab).
+2. Rulează UPETAcqLab.exe (sau Setup.cmd din același folder).
+3. Nu e nevoie de instalare separată .NET — runtime-ul e inclus.
+
+Activare
+--------
+La primul start:
+
+  Titular:  dr.ing. Vilceanu
+  Cheie:    UPET-ACQLAB-XH3T-2AAA-QKN2-NGST
+
+Introdu numele exact ca mai sus, apoi cheia, și apasă Activează.
+Licența e personală, fără expirare.
+Fișier local: %LocalAppData%\UPETAcqLab\license.dat
+
+Hardware
+--------
+Pentru Spider8 pe USB-serial, instalează o dată driverul adaptorului
+(FTDI, CP210x, CH340 sau PL2303, după cablu).
+Fără aparat poți folosi backend-ul Simulator.
+
+Chei noi (opțional)
+-------------------
+În LicenseGen\: UpetLicenseGen.exe "Nume Titular"
+(necesită .NET 8 doar pentru generator)
+
+Versiune pachet: 2.1.0

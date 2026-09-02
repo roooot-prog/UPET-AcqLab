@@ -1,0 +1,51 @@
+================================================================================
+  UPET AcqLab — Spider8 pe USB (cititi pe PC-ul tinta)
+  Universitatea din Petroșani
+================================================================================
+
+DE CE „Connect eșuat” pe alt PC?
+--------------------------------
+Spider8 pe USB nativ NU este un port COM. Are nevoie de driverul oficial:
+
+  HBM USB IO Driver  (usbhbm.sys)  →  dispozitiv Windows „USBHBM…”
+
+Pachetul UPET instalează drivere USB↔serial (FTDI / CH340 / CP210x / PL2303).
+Acestea ajută DOAR dacă folosiți un adaptor USB→COM.
+UPET NU poate redistribui driverul HBM (licență / kit oficial).
+
+PAȘI PE PC-UL NOU
+-----------------
+1) Instalați din kitul oficial HBM / catman Easy:
+     DriverSetups\HBM USB IO Driver Setup.exe
+2) Reporniți Windows.
+3) Conectați Spider8 (cablu USB, alimentare OK).
+4) Device Manager: trebuie să apară Spider8 / USBHBM…
+   (nu „Unknown device” / semnul exclamării).
+5) Închideți catman Easy (USBHBM e exclusiv — un singur program).
+6) În UPET AcqLab:
+     Backend = HBM USB
+     Port    = USBHBM…  (Refresh Porturi)
+     → Connect
+
+DEMO FĂRĂ HARDWARE
+------------------
+  Backend = Simulator → Connect → Start
+
+DIAGNOSTIC AUTOMAT
+------------------
+  Start → UPET AcqLab → Diagnostic Spider8 USB
+  sau: Diagnose-Spider8Usb.cmd (ca Administrator) din folderul aplicației
+
+  Log: %ProgramData%\UPETAcqLab\diagnose-usb.log
+       %ProgramData%\UPETAcqLab\driver-install.log
+       %ProgramData%\UPETAcqLab\setup.log
+
+VERIFICARE RAPIDĂ (PowerShell Admin)
+------------------------------------
+  Get-PnpDevice | Where-Object { $_.InstanceId -match 'VID_10D1|USBHBM' }
+  Get-Service USBHBM
+  Test-Path "C:\Program Files\HBM\HBM USB IO Driver"
+
+Dacă USBHBM lipsește → instalați HBM USB IO Driver, apoi reporniți.
+
+================================================================================

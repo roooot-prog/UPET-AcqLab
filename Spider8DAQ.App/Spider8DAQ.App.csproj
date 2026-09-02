@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x86</PlatformTarget>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <RootNamespace>Spider8DAQ.App</RootNamespace>
+    <AssemblyName>UPETAcqLab</AssemblyName>
+    <Version>3.3.97</Version>
+    <Title>UPET AcqLab</Title>
+    <Product>UPET AcqLab - Universitatea din Petrosani</Product>
+    <Company>Universitatea din Petrosani</Company>
+    <Authors>drd. ing. Iucal Ilie</Authors>
+    <Copyright>(c) Universitatea din Petrosani - Autor soft: drd. ing. Iucal Ilie</Copyright>
+    <Description>UPET AcqLab - laborator de achizitie si analiza date pentru HBM Spider8 (Universitatea din Petrosani)</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ScottPlot.WPF" Version="5.0.55" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <ProjectReference Include="..\Spider8DAQ.Core\Spider8DAQ.Core.csproj" />
+    <ProjectReference Include="..\Spider8DAQ.Hardware\Spider8DAQ.Hardware.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- ExcludeFromSingleFile: PublishSingleFile otherwise drops loose .dll/.exe/.sys from publish output -->
+    <None Include="..\vendor\**\*"
+          Exclude="..\vendor\_hbm_download\**;..\vendor\_tools\**;..\vendor\_extract*\**;..\vendor\usbhbm*;..\vendor\**\*.bak;..\vendor\**\*-bak"
+          Link="vendor\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+    <!-- Embedded WPF resources (pack://application:,,,/Assets/...) - do NOT also mark as Content -->
+    <Resource Include="Assets\upet-logo.png" />
+    <Resource Include="Assets\app.ico" />
+    <None Update="license-server.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- Loose icons for .lnk + ContentFilePart fallback (Copy only - never Content, or pack:// looks on disk) -->
+  <Target Name="CopyLooseAppAssets" AfterTargets="Build">
+    <MakeDir Directories="$(OutputPath)Assets" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\app.ico"
+          DestinationFiles="$(OutputPath)app.ico"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\app.ico"
+          DestinationFiles="$(OutputPath)Assets\app.ico"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\upet-logo.png"
+          DestinationFiles="$(OutputPath)Assets\upet-logo.png"
+          SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyLooseAppAssetsOnPublish" AfterTargets="Publish">
+    <MakeDir Directories="$(PublishDir)Assets" Condition="'$(PublishDir)' != ''" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\app.ico"
+          DestinationFiles="$(PublishDir)app.ico"
+          SkipUnchangedFiles="true"
+          Condition="'$(PublishDir)' != ''" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\app.ico"
+          DestinationFiles="$(PublishDir)Assets\app.ico"
+          SkipUnchangedFiles="true"
+          Condition="'$(PublishDir)' != ''" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\upet-logo.png"
+          DestinationFiles="$(PublishDir)Assets\upet-logo.png"
+          SkipUnchangedFiles="true"
+          Condition="'$(PublishDir)' != ''" />
+  </Target>
+</Project>
