@@ -17,7 +17,10 @@ vendor/usbhbm*
 vendor/_extract*/
 vendor/_tools/
 
-# Local publish trees, runtimes, smoke/tmp
+# License admin ephemeral (never commit tunnel URL)
+**/public-url.txt
+**/lan-url.txt
+
 publish-v2/
 publish-v2-*/
 publish-installer/
@@ -30,6 +33,11 @@ _sp8_help/
 windowsdesktop-runtime-*.exe
 UPETAcqLab-update.zip
 *.zip
+
+# License API history (never commit; lives in %LocalAppData%\UPETAcqLab.LicenseApi)
+**/licenses.db
+**/licenses.db-wal
+**/licenses.db-shm
 
 # Lab prefs, secrets, keys (never on GitHub)
 lab-prefs.json
@@ -52,3 +60,14 @@ _ui_smoke.txt
 _tmp_pressure_test.cs
 vendor/nt_iodrv/*-log.txt
 installer/_last-build-kit.log
+docs/~$*
+tools/_activate_tmp/
+vendor/*.bak
+vendor/*-bak
+
+# Private license Admin — local PC only, never GitHub
+/UPETAcqLab.Admin/
+/UPETAcqLab.LicenseApi/
+/docs/Admin-chei-aplicatie.md
+/tools/Run-LicenseAdmin.ps1
+/UPETAcqLab.Admin.sln

@@ -105,8 +105,7 @@ dotnet run --project tools\LicenseGen -- "Nume Prenume"
 dotnet run --project tools\LicenseGen -- "Nume Prenume" --expires 2027-12-31
 ```
 
-Chei aplicație cu număr de instalări și IP (API găzduit + panou Admin separat): [Admin-chei-aplicatie.md](Admin-chei-aplicatie.md).
-`LicenseServerUrl` e în `license-server.json` lângă `UPETAcqLab.exe` (gol = fără poartă, PC autor).
+`LicenseServerUrl` e în `license-server.json` lângă `UPETAcqLab.exe` (gol = fără poartă).
 
 ## 4. Verificare
 

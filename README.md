@@ -16,8 +16,6 @@ powershell -ExecutionPolicy Bypass -File .\installer\Build-Installer.ps1
 Licență personală UPET AcqLab: format `UPET-ACQLAB-XXXX-XXXX-XXXX-XXXX`  
 Exemplu titular / cheie: `dist\LICENSE-DISTRIBUTIE.txt`.
 
-Chei aplicație / câte PC-uri s-au instalat / IP (API + panou **separat**, nu Canale DAQ): [docs/Admin-chei-aplicatie.md](docs/Admin-chei-aplicatie.md). GitHub Releases nu raportează IP-ul fiecărui PC.
-
 ## Build
 
 ```powershell
@@ -58,7 +56,6 @@ Actualizări din **GitHub Releases public** (fără token pe PC-urile de lab): [
 - `Spider8DAQ.Core` — motor achiziție, proiecte, CSV, math, trigger
 - `Spider8DAQ.Hardware` — Simulator, Serial, Spider32.dll
 - `Spider8DAQ.App` — UI WPF (UPET AcqLab)
-- `UPETAcqLab.LicenseApi` / `UPETAcqLab.Admin` — chei aplicație și activări (panou separat)
 
 ## Note
 
