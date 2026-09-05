@@ -66,4 +66,51 @@ public class StrainScaleTests
         Assert.False(StrainScale.LooksAbsurdTimbruScale(
             StrainScale.Resolve("µm/m", "Half", 10000, 2.12), dummy));
     }
+
+    [Fact]
+    public void LabBridgeFactor_MatchesExperimentDefaults()
+    {
+        Assert.Equal(1.0, StrainScale.LabBridgeFactor(BridgeType.Half, StrainScale.HalfConfigActivDummyT, 0.3), 6);
+        Assert.Equal(1.3, StrainScale.LabBridgeFactor(BridgeType.Half, StrainScale.HalfConfigPoisson, 0.3), 6);
+        Assert.Equal(1.33, StrainScale.LabBridgeFactor(BridgeType.Half, StrainScale.HalfConfigPoisson, 0.33), 6);
+        Assert.Equal(2.0, StrainScale.LabBridgeFactor(BridgeType.Half, StrainScale.HalfConfigSimplu, 0.3), 6);
+        Assert.Equal(4.0, StrainScale.LabBridgeFactor(BridgeType.Half, StrainScale.HalfConfigIncovoiere, 0.3), 6);
+        Assert.Equal(1.0, StrainScale.LabBridgeFactor(BridgeType.Quarter, null, 0.3), 6);
+        Assert.Equal(4.0, StrainScale.LabBridgeFactor(BridgeType.Full, null, 0.3), 6);
+    }
+
+    [Fact]
+    public void FromLabBridgeFactor_HalfDummy_Gf212_Bf1_IsAbout1887()
+    {
+        var s = StrainScale.FromLabBridgeFactor(
+            BridgeType.Half, 2.12, StrainScale.HalfConfigActivDummyT, 1.0);
+        Assert.InRange(s, 1886.7, 1886.9);
+        Assert.Equal(s, StrainScale.FromGaugeFactor(2.12, 1.0), 6);
+        Assert.Equal(
+            StrainScale.FromGaugeFactor(BridgeType.Half, 2.12, StrainScale.HalfConfigActivDummyT, 0.3),
+            s, 6);
+    }
+
+    [Fact]
+    public void FromLabBridgeFactor_Poisson_UsesOnePlusNu_SameAsOldFormula()
+    {
+        var viaLab = StrainScale.FromLabBridgeFactor(
+            BridgeType.Half, 2.0, StrainScale.HalfConfigPoisson, 1.3);
+        var viaLegacy = StrainScale.FromGaugeFactor(BridgeType.Half, 2.0, "Poisson", 0.3);
+        Assert.InRange(viaLab, 769.23, 769.24);
+        Assert.Equal(viaLegacy, viaLab, 6);
+        var overridden = StrainScale.FromLabBridgeFactor(
+            BridgeType.Half, 2.0, StrainScale.HalfConfigPoisson, 1.4);
+        Assert.InRange(overridden, 714.28, 714.29);
+    }
+
+    [Fact]
+    public void FromLabBridgeFactor_IgnoresResistance()
+    {
+        var a = StrainScale.FromLabBridgeFactor(
+            BridgeType.Half, 2.12, StrainScale.HalfConfigActivDummyT, 1.0);
+        var b = StrainScale.FromGaugeFactor(
+            BridgeType.Half, 2.12, StrainScale.HalfConfigActivDummyT, 0.3);
+        Assert.Equal(a, b, 6);
+    }
 }

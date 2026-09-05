@@ -85,6 +85,29 @@ public class DeviceWatchdogTests
     }
 
     [Fact]
+    public async Task Zero_reconnect_raises_lost_on_sample_silence_even_if_device_present()
+    {
+        var lost = new TaskCompletionSource();
+        var reconnects = 0;
+        var wd = new DeviceWatchdog(
+            reconnectAsync: () =>
+            {
+                Interlocked.Increment(ref reconnects);
+                return Task.FromResult(true);
+            },
+            timeout: TimeSpan.FromMilliseconds(25),
+            pollInterval: TimeSpan.FromMilliseconds(15),
+            isDevicePresent: () => true,
+            monitorSamples: () => true);
+        wd.MaxReconnectAttempts = 0;
+        wd.ConnectionLost += (_, _) => lost.TrySetResult();
+        wd.Start();
+        await lost.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.Equal(0, reconnects);
+        await wd.DisposeAsync();
+    }
+
+    [Fact]
     public async Task Monitor_samples_false_skips_reconnect_on_silence()
     {
         var reconnects = 0;

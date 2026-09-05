@@ -737,6 +737,7 @@ public partial class MainViewModel
                 ExcitationV = ch.ExcitationV, ShuntKohm = ch.ShuntKohm,
                 GaugeFactor = ch.GaugeFactor, GaugeOhm = ch.GaugeOhm,
                 HalfConfig = ch.HalfConfig, PoissonRatio = ch.PoissonRatio,
+                BridgeFactor = ch.BridgeFactor,
                 AlarmEnabled = ch.AlarmEnabled, AlarmLow = ch.AlarmLow,
                 AlarmHigh = ch.AlarmHigh, ShuntEnabled = ch.ShuntEnabled, LastShuntReading = ch.LastShuntReading,
                 Capacity = ch.Capacity, SensorCategory = ch.SensorCategory

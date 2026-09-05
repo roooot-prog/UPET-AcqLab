@@ -269,9 +269,9 @@
               </ItemsControl>
             </ScrollViewer>
 
-            <!-- Centered Conn cluster + Start/Stop/Rec/Zero. Operator: port + Conn only. -->
+            <!-- Left-aligned Conn cluster + Start/Stop/Rec/Zero. Operator: port + Conn only. -->
             <StackPanel Margin="0,0,0,2" xmlns:local="clr-namespace:Spider8DAQ.App">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                       <ComboBox Style="{StaticResource RibbonFieldCombo}" ItemsSource="{Binding Backends}"
                                 SelectedItem="{Binding SelectedBackend}" MinWidth="100"

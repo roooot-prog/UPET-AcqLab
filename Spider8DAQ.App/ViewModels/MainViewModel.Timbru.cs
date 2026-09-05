@@ -19,6 +19,8 @@ public partial class MainViewModel
     private int _timbruQuarterCompOhm = 350;
     private string _timbruHalfConfig = StrainScale.HalfConfigActivDummyT;
     private double _timbruPoissonRatio = 0.3;
+    private double _timbruBridgeFactor = 1.0;
+    private bool _timbruBfOverride;
     private double _timbruComputedScale = 2000;
     private string _timbruStatus = "Timbru: Half + Activ + timbru pasiv (compensare T°) — GF, Calculează Scale, Aplică.";
     private bool _timbruAutorange;
@@ -72,6 +74,7 @@ public partial class MainViewModel
             OnPropertyChanged(nameof(TimbruShowQuarterComp));
             OnPropertyChanged(nameof(TimbruShowHalfConfig));
             OnPropertyChanged(nameof(TimbruShowPoissonNu));
+            ResetTimbruBridgeFactorFromExperiment();
             RecalcTimbruScaleSilent();
         }
     }
@@ -102,6 +105,7 @@ public partial class MainViewModel
             _timbruHalfConfig = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(TimbruShowPoissonNu));
+            ResetTimbruBridgeFactorFromExperiment();
             RecalcTimbruScaleSilent();
         }
     }
@@ -109,7 +113,25 @@ public partial class MainViewModel
     public double TimbruPoissonRatio
     {
         get => _timbruPoissonRatio;
-        set { _timbruPoissonRatio = value; OnPropertyChanged(); RecalcTimbruScaleSilent(); }
+        set
+        {
+            _timbruPoissonRatio = value;
+            OnPropertyChanged();
+            if (!_timbruBfOverride)
+                ResetTimbruBridgeFactorFromExperiment();
+            RecalcTimbruScaleSilent();
+        }
+    }
+
+    public double TimbruBridgeFactor
+    {
+        get => _timbruBridgeFactor;
+        set
+        {
+            _timbruBridgeFactor = value > 1e-9 ? value : 1.0;
+            OnPropertyChanged();
+            RecalcTimbruScaleSilent();
+        }
     }
 
     public double TimbruComputedScale
@@ -197,9 +219,10 @@ public partial class MainViewModel
     }
 
     /// <summary>Called by <see cref="Controls.TimbruQuickSetupWindow"/> — fills Timbru fields and applies to channel.</summary>
-    public void ApplyTimbruQuickSetup(int channelHw, string bridge, string halfConfig, double gf, double rOhm, double nu, int? quarterCompOhm)
+    public void ApplyTimbruQuickSetup(int channelHw, string bridge, string halfConfig, double gf, double rOhm, double nu, int? quarterCompOhm, double? bridgeFactor = null)
     {
         TimbruChannelUi = channelHw;
+        _timbruBfOverride = false;
         TimbruBridge = bridge;
         TimbruHalfConfig = NormalizeHalfConfig(halfConfig);
         TimbruGaugeFactor = gf;
@@ -207,6 +230,11 @@ public partial class MainViewModel
         TimbruPoissonRatio = nu;
         if (quarterCompOhm is int qc)
             TimbruQuarterCompOhm = qc;
+        var bf = bridgeFactor is double userBf && userBf > 1e-9
+            ? userBf
+            : StrainScale.LabBridgeFactor(TimbruBridge, NormalizeHalfConfig(TimbruHalfConfig), TimbruPoissonRatio);
+        _timbruBfOverride = true;
+        TimbruBridgeFactor = bf;
         CalculateTimbruScale();
         ApplyTimbruToChannel();
         if (TimbruAutorange)
@@ -219,10 +247,19 @@ public partial class MainViewModel
                 : "");
     }
 
+    private void ResetTimbruBridgeFactorFromExperiment()
+    {
+        _timbruBfOverride = false;
+        _timbruBridgeFactor = StrainScale.LabBridgeFactor(
+            TimbruBridge, NormalizeHalfConfig(TimbruHalfConfig), TimbruPoissonRatio);
+        OnPropertyChanged(nameof(TimbruBridgeFactor));
+    }
+
     private void RecalcTimbruScaleSilent()
     {
         var half = NormalizeHalfConfig(TimbruHalfConfig);
-        TimbruComputedScale = StrainScale.FromGaugeFactor(TimbruBridge, TimbruGaugeFactor, half, TimbruPoissonRatio);
+        TimbruComputedScale = StrainScale.FromLabBridgeFactor(
+            TimbruBridge, TimbruGaugeFactor, half, TimbruBridgeFactor);
     }
 
     private static string NormalizeHalfConfig(string? cfg)
@@ -241,14 +278,9 @@ public partial class MainViewModel
     private void CalculateTimbruScale()
     {
         RecalcTimbruScaleSilent();
-        var bfHint = StrainScale.IsActivDummyT(TimbruHalfConfig) ? " · BF=1 (activ + timbru pasiv T°)"
-            : TimbruHalfConfig.Contains("Poiss", StringComparison.OrdinalIgnoreCase) ? " · Half Poisson"
-            : TimbruHalfConfig.Contains("ncovoi", StringComparison.OrdinalIgnoreCase) ? " · Half încovoiere"
-            : TimbruShowHalfConfig ? " · Half Simplu (BF≈2)" : "";
         TimbruStatus =
-            $"Scale={TimbruComputedScale:0.####} µm/m per mV/V · GF={TimbruGaugeFactor:0.##} · {TimbruBridge}" +
+            $"Scale={TimbruComputedScale:0.####} µm/m per mV/V · GF={TimbruGaugeFactor:0.##} · BF={TimbruBridgeFactor:0.###} · {TimbruBridge}" +
             (TimbruShowHalfConfig ? $" / {TimbruHalfConfig}" : "") +
-            bfHint +
             (TimbruShowQuarterComp ? $" · Rcomp={TimbruQuarterCompOhm} Ω" : "");
         Status = "Timbru: " + TimbruStatus;
     }
@@ -282,6 +314,7 @@ public partial class MainViewModel
         ch.GaugeFactor = TimbruGaugeFactor;
         ch.GaugeOhm = TimbruResistanceOhm;
         ch.PoissonRatio = TimbruPoissonRatio;
+        ch.BridgeFactor = TimbruBridgeFactor;
         ch.HalfConfig = TimbruShowHalfConfig ? NormalizeHalfConfig(TimbruHalfConfig) : null;
         // Rsh kΩ stays the grid/sensor shunt field — never store Rcomp here.
         TryFillInternalShuntOnTimbruChannel(ch);
@@ -302,7 +335,7 @@ public partial class MainViewModel
             _ = PushChannelConfigAsync(reapplyAcquisition: IsStreaming);
         TimbruStatus = $"Aplicat pe {ch.Name} (HW{ch.Index}): Scale={ch.Scale:0.####}, Bridge={ch.Bridge}" +
                        (TimbruShowHalfConfig ? $"/{TimbruHalfConfig}" : "") +
-                       $", GF={ch.GaugeFactor:0.##}, R={ch.GaugeOhm:0.#} Ω" +
+                       $", GF={ch.GaugeFactor:0.##}, BF={ch.BridgeFactor:0.###}, R={ch.GaugeOhm:0.#} Ω" +
                        (ch.ShuntKohm >= ShuntCheck.MinShuntKohm
                            ? $", Rsh={ch.ShuntKohm.ToString("0.##", CultureInfo.InvariantCulture)} kΩ"
                              + (ch.ShuntKohmFromDevice ? " (intern Spider8-30)" : "")
@@ -556,8 +589,11 @@ public partial class MainViewModel
         RecalcTimbruScaleSilent();
         if (ch.GaugeFactor > 1e-9)
         {
-            var fromCh = StrainScale.FromGaugeFactor(ch.Bridge, ch.GaugeFactor, ch.HalfConfig,
-                ch.PoissonRatio > 0 ? ch.PoissonRatio : 0.3);
+            var nu = ch.PoissonRatio > 0 ? ch.PoissonRatio : 0.3;
+            var labBf = ch.BridgeFactor > 1e-9
+                ? ch.BridgeFactor
+                : StrainScale.LabBridgeFactor(ch.Bridge, ch.HalfConfig, nu);
+            var fromCh = StrainScale.FromLabBridgeFactor(ch.Bridge, ch.GaugeFactor, ch.HalfConfig, labBf);
             if (fromCh >= 10)
                 return fromCh;
         }

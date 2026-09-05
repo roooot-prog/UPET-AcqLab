@@ -37,6 +37,8 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
     private HbmUsbIo.SafeHbmUsbHandle? _usb;
     private CancellationTokenSource? _cts;
     private Task? _loop;
+    private CancellationTokenSource? _linkCts;
+    private Task? _linkLoop;
     private long _sequence;
     private DateTime? _lastSampleUtc;
     private string? _lastIdn;
@@ -91,6 +93,7 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
     internal const int LostCommunicationSilenceMs = 3000;
     internal const int LostCommunicationHardUsbErrors = 3;
     internal const int DestPresencePollMs = 1500;
+    internal const int IdleLinkFailCount = 2;
 
     public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
@@ -112,6 +115,7 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
                 EnsureDigitalChannelSlot();
                 StatusChanged?.Invoke(this,
                     "Power-cycle Spider8 — LED ERROR (EST hard la Connect).");
+                StartLinkMonitor();
                 return Task.CompletedTask;
             }
 
@@ -123,6 +127,7 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
             if (string.IsNullOrEmpty(label)) label = "USBHBM";
             StatusChanged?.Invoke(this,
                 $"Conectat DEST ({label}). Start = SoftSetup CH0 half-bridge + MSV.");
+            StartLinkMonitor();
             return Task.CompletedTask;
         }
         catch (Exception ex)
@@ -138,7 +143,9 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
 
     public async Task DisconnectAsync()
     {
+        StopLinkMonitor();
         await StopStreamingAsync();
+        StopLinkMonitor();
         // No STP/DCL on DEST disconnect — writes latch ERROR on this unit.
         _usb?.Dispose();
         _usb = null;
@@ -152,11 +159,14 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
         if (_usb is not { IsOpen: true })
             throw new InvalidOperationException("Nu sunteți conectat la USBHBM.");
 
+        StopLinkMonitor();
+
         // Re-probe EST? even if SoftSetup previously set _deviceInError — one-shot hard often clears.
         if (!EnsureDeviceHealthy("înainte de Start"))
         {
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "Power-cycle Spider8 — LED ERROR");
+            StartLinkMonitor();
             throw new InvalidOperationException("Power-cycle Spider8 — LED ERROR");
         }
 
@@ -165,6 +175,7 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
         {
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "Power-cycle Spider8 — LED ERROR");
+            StartLinkMonitor();
             throw new InvalidOperationException("Power-cycle Spider8 — LED ERROR");
         }
 
@@ -197,6 +208,7 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
             _cts = null;
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "Setup MSV: " + ex.Message);
+            StartLinkMonitor();
             throw;
         }
 
@@ -234,6 +246,8 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
                 _framesEmitted > 0
                     ? $"Streaming HBM USB oprit ({_framesEmitted} cadre)."
                     : "Streaming HBM USB oprit (0 cadre — verificați ACT/ASA și că catman e închis).");
+            if (_usb is { IsOpen: true } && State == DeviceConnectionState.Connected)
+                StartLinkMonitor();
         }
     }
 
@@ -796,12 +810,100 @@ public sealed class HbmUsbSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
                 try { await Task.Delay(80, ct); } catch { break; }
             }
         }
+
+        if (!ct.IsCancellationRequested && Volatile.Read(ref _connectionLostRaised) == 0)
+            DeclareConnectionLost("USB închis / fără date în streaming");
+    }
+
+    private void StartLinkMonitor()
+    {
+        if (Volatile.Read(ref _connectionLostRaised) != 0) return;
+        if (_usb is not { IsOpen: true }) return;
+        if (State != DeviceConnectionState.Connected) return;
+        StopLinkMonitor();
+        _linkCts = new CancellationTokenSource();
+        _linkLoop = Task.Run(() => LinkMonitorLoopAsync(_linkCts.Token));
+    }
+
+    private void StopLinkMonitor()
+    {
+        try { _linkCts?.Cancel(); } catch { /* ignore */ }
+        try { _linkCts?.Dispose(); } catch { /* ignore */ }
+        _linkCts = null;
+        _linkLoop = null;
+    }
+
+    /// <summary>
+    /// Connected-but-idle: DEST can stay enumerated on USB 5V after the Spider8 box is powered off.
+    /// EST?/DEST absence is the only live check until OMB streaming starts.
+    /// </summary>
+    private async Task LinkMonitorLoopAsync(CancellationToken ct)
+    {
+        var fails = 0;
+        var startedMs = Environment.TickCount64;
+        while (!ct.IsCancellationRequested
+               && State == DeviceConnectionState.Connected
+               && _usb is { IsOpen: true }
+               && Volatile.Read(ref _connectionLostRaised) == 0)
+        {
+            try
+            {
+                await Task.Delay(DestPresencePollMs, ct);
+                if (State != DeviceConnectionState.Connected) break;
+                if (!HbmUsbDeviceScanner.IsDestInterfacePresent(_serialHint))
+                {
+                    DeclareConnectionLost("DEST USB absent");
+                    break;
+                }
+
+                // Skip EST during Connect+ApplyChannelConfig (EST mid-ACT latches 10005).
+                if (Environment.TickCount64 - startedMs < 4000)
+                    continue;
+
+                if (!TryIdleLinkProbe())
+                {
+                    fails++;
+                    if (fails >= IdleLinkFailCount)
+                    {
+                        DeclareConnectionLost("USB deschis dar fără răspuns Spider8");
+                        break;
+                    }
+                }
+                else
+                    fails = 0;
+            }
+            catch (OperationCanceledException) { break; }
+            catch
+            {
+                fails++;
+                if (fails >= IdleLinkFailCount)
+                {
+                    DeclareConnectionLost("USB deschis dar fără răspuns Spider8");
+                    break;
+                }
+            }
+        }
+    }
+
+    private bool TryIdleLinkProbe()
+    {
+        if (_usb is not { IsOpen: true }) return false;
+        try
+        {
+            var est = _usb.TransactAscii("EST?", 800);
+            return !string.IsNullOrWhiteSpace(est);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void DeclareConnectionLost(string reason)
     {
         if (Interlocked.Exchange(ref _connectionLostRaised, 1) != 0) return;
         State = DeviceConnectionState.Error;
+        try { _linkCts?.Cancel(); } catch { /* ignore */ }
         try { _cts?.Cancel(); } catch { /* ignore */ }
         try { _usb?.Dispose(); } catch { /* ignore */ }
         _usb = null;

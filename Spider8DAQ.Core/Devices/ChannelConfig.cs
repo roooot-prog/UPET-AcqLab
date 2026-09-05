@@ -43,6 +43,8 @@ public sealed class ChannelConfig
     public string? HalfConfig { get; set; }
     /// <summary>Poisson ratio from Timbru (used for Half Poisson shunt/Scale).</summary>
     public double PoissonRatio { get; set; }
+    /// <summary>Lab BF from Asistent Timbru (0 = derive from Bridge/HalfConfig/ν).</summary>
+    public double BridgeFactor { get; set; }
     public bool ShuntEnabled { get; set; }
     // Prefer finite defaults so JSON serialization never crashes without special NumberHandling.
     public double LastShuntReading { get; set; }

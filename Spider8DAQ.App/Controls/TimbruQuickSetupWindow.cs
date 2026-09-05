@@ -9,7 +9,7 @@ using Spider8DAQ.Core.Sensors;
 namespace Spider8DAQ.App.Controls;
 
 /// <summary>
-/// Guided Timbru setup: pick experiment type → CH / GF / R → apply automatically.
+/// Guided Timbru setup: pick experiment type → CH / GF / BF / R → apply automatically.
 /// Targets lab users who should not wrestle Bridge/BF terminology.
 /// </summary>
 public sealed class TimbruQuickSetupWindow : Window
@@ -18,10 +18,14 @@ public sealed class TimbruQuickSetupWindow : Window
     private readonly ComboBox _presetBox;
     private readonly TextBox _chBox;
     private readonly TextBox _gfBox;
+    private readonly TextBox _bfBox;
     private readonly TextBox _rBox;
     private readonly TextBox _nuBox;
     private readonly TextBlock _preview;
     private readonly TextBlock _steps;
+    private bool _bfDirty;
+    private bool _bfUpdating;
+    private string? _bfPresetKey;
 
     private sealed record Preset(
         string Title,
@@ -36,31 +40,31 @@ public sealed class TimbruQuickSetupWindow : Window
             "Activ pe grindă + timbru pasiv (compensare T°) pe placă (același canal)",
             nameof(BridgeType.Half),
             StrainScale.HalfConfigActivDummyT,
-            "Echivalent NI Quarter Bridge II. Timbrul pasiv compensează temperatura. Scale = 4000/GF (BF=1).",
+            "Echivalent NI Quarter Bridge II. Timbrul pasiv compensează temperatura. Scale = 4000/(GF·BF), BF=1.",
             false),
         new(
             "Axial + transversal pe piesă (Poisson)",
             nameof(BridgeType.Half),
             StrainScale.HalfConfigPoisson,
-            "Ambele timbre pe grindă. Scale = 2000/(GF·(1+ν)).",
+            "Ambele timbre pe grindă. Scale = 4000/(GF·B) cu B=2·BF, BF=1+ν.",
             true),
         new(
             "Încovoiere (sus / jos pe grindă)",
             nameof(BridgeType.Half),
             StrainScale.HalfConfigIncovoiere,
-            "Unul sus, unul jos. Scale = 1000/GF.",
+            "Unul sus, unul jos. Scale = 4000/(GF·BF), BF=4.",
             false),
         new(
             "Half Simplu (2 activi, fără timbru pasiv dedicat)",
             nameof(BridgeType.Half),
             StrainScale.HalfConfigSimplu,
-            "Scale = 2000/GF (BF≈2).",
+            "Scale = 4000/(GF·BF) (BF=2).",
             false),
         new(
             "Quarter + rezistență de completare în aparat",
             nameof(BridgeType.Quarter),
             StrainScale.HalfConfigSimplu,
-            "Un singur timbru activ + Rcomp în Spider8. Scale = 4000/GF.",
+            "Un singur timbru activ + Rcomp în Spider8. Scale = 4000/(GF·BF), BF=1.",
             false),
     };
 
@@ -68,8 +72,8 @@ public sealed class TimbruQuickSetupWindow : Window
     {
         _vm = vm;
         Title = "Asistent Timbru — UPET AcqLab";
-        Width = 560;
-        Height = 520;
+        Width = 580;
+        Height = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
         Background = new SolidColorBrush(Color.FromRgb(0xDD, 0xE3, 0xEA));
@@ -135,13 +139,22 @@ public sealed class TimbruQuickSetupWindow : Window
         var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
         row.Children.Add(Field("2. Canal (CH0…CH7)", out _chBox, _vm.TimbruChannelUi.ToString(CultureInfo.InvariantCulture), 72));
         row.Children.Add(Field("3. GF (de pe pachet)", out _gfBox, FormatNum(_vm.TimbruGaugeFactor), 72));
+        row.Children.Add(Field("BF (factor de punte)", out _bfBox, FormatNum(_vm.TimbruBridgeFactor), 72));
         row.Children.Add(Field("4. R Ω", out _rBox, FormatNum(_vm.TimbruResistanceOhm), 72));
         row.Children.Add(Field("ν (doar Poisson)", out _nuBox, FormatNum(_vm.TimbruPoissonRatio), 64));
         _chBox.LostFocus += (_, _) => RefreshPreview();
         _gfBox.LostFocus += (_, _) => RefreshPreview();
         _gfBox.TextChanged += (_, _) => RefreshPreview();
+        _bfBox.LostFocus += (_, _) => RefreshPreview();
+        _bfBox.TextChanged += (_, _) =>
+        {
+            if (_bfUpdating) return;
+            _bfDirty = true;
+            RefreshPreview();
+        };
         _rBox.LostFocus += (_, _) => RefreshPreview();
         _nuBox.LostFocus += (_, _) => RefreshPreview();
+        _nuBox.TextChanged += (_, _) => RefreshPreview();
         form.Children.Add(row);
 
         _preview = new TextBlock
@@ -205,20 +218,38 @@ public sealed class TimbruQuickSetupWindow : Window
     private void RefreshPreview()
     {
         var p = SelectedPreset();
-        if (p is null) return;
+        if (p is null || _gfBox is null || _bfBox is null || _nuBox is null || _preview is null || _steps is null)
+            return;
 
         if (!TryParseFlex(_gfBox.Text, out var gf) || gf <= 0)
             gf = 2.0;
         if (!TryParseFlex(_nuBox.Text, out var nu) || nu <= 0 || nu >= 1)
             nu = 0.3;
 
-        var scale = StrainScale.FromGaugeFactor(p.Bridge, gf, p.HalfConfig, nu);
+        var autoBf = StrainScale.LabBridgeFactor(p.Bridge, p.HalfConfig, nu);
+        var presetKey = p.Title;
+        if (!string.Equals(presetKey, _bfPresetKey, StringComparison.Ordinal))
+        {
+            _bfDirty = false;
+            _bfPresetKey = presetKey;
+        }
+
+        if (!_bfDirty)
+            SetBfText(autoBf);
+
+        if (!TryParseFlex(_bfBox.Text, out var bf) || bf <= 0)
+            bf = autoBf;
+
+        var scale = StrainScale.FromLabBridgeFactor(p.Bridge, gf, p.HalfConfig, bf);
         _preview.Text = $"→ Bridge={p.Bridge}" +
                         (p.Bridge == nameof(BridgeType.Half) ? $" / {p.HalfConfig}" : "") +
-                        $" · Scale={scale:0.####} µm/m per mV/V\n{p.Explain}";
+                        $" · BF={bf:0.###} · Scale={scale:0.####} µm/m per mV/V\n{p.Explain}";
 
         _nuBox.IsEnabled = p.NeedsNu;
+        _bfBox.IsEnabled = true;
         _steps.Text =
+            "BF=1 quarter / half+dummy T°; 1+ν Poisson; 2 half simplu; 4 full / încovoiere. " +
+            "Scale = 4000/(GF·B) (la Poisson B=2·BF). R Ω nu intră în Scale.\n\n" +
             "După Configurează automat:\n" +
             "1) Cablare: activ + timbru pasiv (compensare T°) pe același canal Half — butonul Arată cablare.\n" +
             "2) Connect → Start (stream).\n" +
@@ -229,6 +260,13 @@ public sealed class TimbruQuickSetupWindow : Window
             (_vm.TimbruAutorange
                 ? "\nAutorange ON: după configurare se alege domeniul 2000/5000/10000/20000 µm/m (vârf live sau epruvetă) — nu se forțează 2000 peste un domeniu mai larg."
                 : "");
+    }
+
+    private void SetBfText(double bf)
+    {
+        _bfUpdating = true;
+        try { _bfBox.Text = FormatNum(bf); }
+        finally { _bfUpdating = false; }
     }
 
     private void ApplyPreset()
@@ -252,18 +290,25 @@ public sealed class TimbruQuickSetupWindow : Window
             r = 350;
         if (!TryParseFlex(_nuBox.Text, out var nu) || nu <= 0 || nu >= 1)
             nu = 0.3;
+        if (!TryParseFlex(_bfBox.Text, out var bf) || bf <= 0)
+        {
+            MessageBox.Show(this, "BF invalid — factor de punte (ex. 1 pentru half+dummy).", "Asistent Timbru",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
 
         _vm.ApplyTimbruQuickSetup(ch, p.Bridge, p.HalfConfig, gf, r, nu,
-            p.Bridge == nameof(BridgeType.Quarter) ? (int)Math.Round(r) : null);
+            p.Bridge == nameof(BridgeType.Quarter) ? (int)Math.Round(r) : null,
+            bf);
 
-        var scale = StrainScale.FromGaugeFactor(p.Bridge, gf, p.HalfConfig, nu);
+        var scale = StrainScale.FromLabBridgeFactor(p.Bridge, gf, p.HalfConfig, bf);
         var ar = _vm.TimbruAutorange && _vm.TimbruAutorangeDomain > 0
             ? $"\nAutorange: domeniu {_vm.TimbruAutorangeDomain:0} µm/m (Scale GF={scale:0.####}, nu s-a forțat 2000 peste un domeniu mai larg)."
             : "";
         MessageBox.Show(this,
             $"Canal CH{ch} configurat.\n\n" +
             $"Bridge={p.Bridge}" + (p.Bridge == nameof(BridgeType.Half) ? $" / {p.HalfConfig}" : "") + "\n" +
-            $"GF={gf:0.###} · R={r:0.#} Ω · Scale={scale:0.####} µm/m per mV/V · Exc=2.5 V{ar}\n\n" +
+            $"GF={gf:0.###} · BF={bf:0.###} · R={r:0.#} Ω · Scale={scale:0.####} µm/m per mV/V · Exc=2.5 V{ar}\n\n" +
             "Următorii pași: Connect → Start → Zero (F9) fără sarcină → Record.",
             "Asistent Timbru — gata",
             MessageBoxButton.OK, MessageBoxImage.Information);

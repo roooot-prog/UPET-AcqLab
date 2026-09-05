@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Reflection;
 using System.Windows.Input;
 using System.Windows.Media;
 using Spider8DAQ.Core.Export;
+using Spider8DAQ.Core.Licensing;
 
 namespace Spider8DAQ.App.ViewModels;
 
@@ -108,7 +108,7 @@ public partial class MainViewModel
     }
 
     public string AppVersion { get; } =
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "2.9.8";
+        ApplicationKeyIdentity.LocalFileVersion() is { Length: > 0 } v ? v : "3.3.106";
 
     public string AppInfoText { get; } =
         $"{ReportHeaderHelper.ProductName} — laborator achiziție date HBM Spider8\n" +

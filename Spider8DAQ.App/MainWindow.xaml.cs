@@ -19,6 +19,10 @@ public partial class MainWindow : Window
     private DispatcherTimer? _layoutSaveTimer;
     private bool _layoutLoaded;
 
+    public Task HaltMeasurementForLicenseGateAsync() => _vm.HaltForLicenseGateAsync();
+    public Task ApplyAdminStopRecordingAsync() => _vm.ApplyAdminStopRecordingAsync();
+    public Task ApplyAdminZeroAsync() => _vm.ApplyAdminZeroAsync();
+
     public MainWindow(string? openPath = null)
     {
         // VM in ctor body so init failures don't become fatal XamlParseException.

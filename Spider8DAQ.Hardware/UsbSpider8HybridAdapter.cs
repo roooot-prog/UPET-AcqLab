@@ -133,7 +133,7 @@ public sealed class UsbSpider8HybridAdapter : ISpider8Device, IDeviceHealth, IDi
             _inner = dest;
             _mode = "dest";
             StatusChanged?.Invoke(this,
-                "DEST conectat (OK fără Intfac). Start = SoftSetup ACT/ASA/EXC + MSV + OMB?0.");
+                "DEST (fără Intfac) — USB deschis, nu confirmă alimentarea Spider8. Start verifică OMB.");
         }
         catch (Exception ex)
         {

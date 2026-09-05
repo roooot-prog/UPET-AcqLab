@@ -120,9 +120,15 @@ public class ApplicationKeyWindow : Window
                 }
 
                 status.Foreground = new SolidColorBrush(Color.FromRgb(0xC8, 0x10, 0x2E));
-                status.Text = result == ApplicationKeyHeartbeatResult.Invalid
-                    ? "Cheie invalidă. Nu puteți folosi achiziția DAQ fără o cheie acceptată de server."
-                    : "Serverul de licențe nu răspunde. Prima activare necesită conexiune la server.";
+                status.Text = result switch
+                {
+                    ApplicationKeyHeartbeatResult.Ok => "",
+                    ApplicationKeyHeartbeatResult.Expired =>
+                        "Licența a expirat. Așteptați reaprobarea administratorului (Aprobă, 30 de zile).",
+                    ApplicationKeyHeartbeatResult.Invalid =>
+                        "Cheie invalidă. Nu puteți folosi achiziția DAQ fără o cheie acceptată de server.",
+                    _ => "Serverul de licențe nu răspunde. Prima activare necesită conexiune la server."
+                };
             }
             catch (Exception ex)
             {

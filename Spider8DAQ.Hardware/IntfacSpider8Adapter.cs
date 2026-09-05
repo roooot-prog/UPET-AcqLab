@@ -21,6 +21,8 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
     private readonly List<ChannelConfig> _channels;
     private CancellationTokenSource? _cts;
     private Task? _loop;
+    private CancellationTokenSource? _linkCts;
+    private Task? _linkLoop;
     private long _sequence;
     private DateTime? _lastSampleUtc;
     private string? _lastIdn;
@@ -192,6 +194,7 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
             EnsureDigitalChannelSlot();
             StatusChanged?.Invoke(this,
                 $"Conectat via Intfac32 ({_openedAs}). CH0–CH7 analog; EST? ACK pe Connect.");
+            StartLinkMonitor();
             return Task.CompletedTask;
         }
         catch (Exception ex)
@@ -206,7 +209,9 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
 
     public async Task DisconnectAsync()
     {
+        StopLinkMonitor();
         await StopStreamingAsync();
+        StopLinkMonitor();
         SafeClosePort();
         State = DeviceConnectionState.Disconnected;
         if (Volatile.Read(ref _connectionLostRaised) == 0)
@@ -218,11 +223,14 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
         if (!_portOpen)
             throw new InvalidOperationException("Nu sunteți conectat via Intfac.");
 
+        StopLinkMonitor();
+
         // Re-probe EST? even if a prior SoftSetup left _deviceInError — reading often clears LED.
         if (!EnsureHealthy("înainte de Start"))
         {
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "Power-cycle Spider8 — LED ERROR");
+            StartLinkMonitor();
             throw new InvalidOperationException("Power-cycle Spider8 — LED ERROR");
         }
 
@@ -231,6 +239,7 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
         {
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "Power-cycle Spider8 — LED ERROR");
+            StartLinkMonitor();
             throw new InvalidOperationException("Power-cycle Spider8 — LED ERROR");
         }
 
@@ -272,6 +281,7 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
             _cts = null;
             State = DeviceConnectionState.Connected;
             StatusChanged?.Invoke(this, "MSV Intfac: " + ex.Message);
+            StartLinkMonitor();
             throw;
         }
 
@@ -286,6 +296,9 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
         {
             if (State == DeviceConnectionState.Streaming)
                 State = DeviceConnectionState.Connected;
+            if (Volatile.Read(ref _connectionLostRaised) == 0 && _portOpen
+                && State == DeviceConnectionState.Connected)
+                StartLinkMonitor();
             return;
         }
         _cts.Cancel();
@@ -301,6 +314,8 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
                 _framesEmitted > 0
                     ? $"Streaming Intfac oprit ({_framesEmitted} cadre)."
                     : "Streaming Intfac oprit (0 cadre — CH0 Half + senzor, catman închis).");
+            if (_portOpen && State == DeviceConnectionState.Connected)
+                StartLinkMonitor();
         }
     }
 
@@ -741,12 +756,95 @@ public sealed class IntfacSpider8Adapter : ISpider8Device, IDeviceHealth, IDigit
                 try { await Task.Delay(30, ct); } catch { break; }
             }
         }
+
+        if (!ct.IsCancellationRequested && Volatile.Read(ref _connectionLostRaised) == 0)
+            DeclareConnectionLost("Intfac închis / fără date în streaming");
+    }
+
+    private void StartLinkMonitor()
+    {
+        if (Volatile.Read(ref _connectionLostRaised) != 0) return;
+        if (!_portOpen) return;
+        if (State != DeviceConnectionState.Connected) return;
+        StopLinkMonitor();
+        _linkCts = new CancellationTokenSource();
+        _linkLoop = Task.Run(() => LinkMonitorLoopAsync(_linkCts.Token));
+    }
+
+    private void StopLinkMonitor()
+    {
+        try { _linkCts?.Cancel(); } catch { /* ignore */ }
+        try { _linkCts?.Dispose(); } catch { /* ignore */ }
+        _linkCts = null;
+        _linkLoop = null;
+    }
+
+    private async Task LinkMonitorLoopAsync(CancellationToken ct)
+    {
+        var fails = 0;
+        var startedMs = Environment.TickCount64;
+        while (!ct.IsCancellationRequested
+               && State == DeviceConnectionState.Connected
+               && _portOpen
+               && Volatile.Read(ref _connectionLostRaised) == 0)
+        {
+            try
+            {
+                await Task.Delay(HbmUsbSpider8Adapter.DestPresencePollMs, ct);
+                if (State != DeviceConnectionState.Connected) break;
+                if (!HbmUsbDeviceScanner.IsDestInterfacePresent(_serialHint))
+                {
+                    DeclareConnectionLost("DEST USB absent");
+                    break;
+                }
+
+                if (Environment.TickCount64 - startedMs < 4000)
+                    continue;
+
+                if (!TryIdleLinkProbe())
+                {
+                    fails++;
+                    if (fails >= HbmUsbSpider8Adapter.IdleLinkFailCount)
+                    {
+                        DeclareConnectionLost("USB deschis dar fără răspuns Spider8");
+                        break;
+                    }
+                }
+                else
+                    fails = 0;
+            }
+            catch (OperationCanceledException) { break; }
+            catch
+            {
+                fails++;
+                if (fails >= HbmUsbSpider8Adapter.IdleLinkFailCount)
+                {
+                    DeclareConnectionLost("USB deschis dar fără răspuns Spider8");
+                    break;
+                }
+            }
+        }
+    }
+
+    private bool TryIdleLinkProbe()
+    {
+        if (!_portOpen) return false;
+        try
+        {
+            var est = Intfac32Native.Transact("EST?", 120, 2);
+            return !string.IsNullOrWhiteSpace(est);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void DeclareConnectionLost(string reason)
     {
         if (Interlocked.Exchange(ref _connectionLostRaised, 1) != 0) return;
         State = DeviceConnectionState.Error;
+        try { _linkCts?.Cancel(); } catch { /* ignore */ }
         try { _cts?.Cancel(); } catch { /* ignore */ }
         try { SafeClosePort(); } catch { /* ignore */ }
         var msg = "Comunicare pierdută — " + reason;

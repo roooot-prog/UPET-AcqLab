@@ -23,10 +23,11 @@ public class InstrumentChromeTests
     }
 
     [Fact]
-    public void Action_row_is_centered_conexiune_plus_measure_clusters()
+    public void Action_row_is_left_aligned_conexiune_plus_measure_clusters()
     {
         var chrome = ReadInstrumentChrome();
-        Assert.Contains("HorizontalAlignment=\"Center\"", chrome);
+        Assert.Contains("HorizontalAlignment=\"Left\"", chrome);
+        Assert.Contains("Orientation=\"Horizontal\" VerticalAlignment=\"Center\" HorizontalAlignment=\"Left\"", chrome);
         Assert.Contains("Text=\"Conn\"", chrome);
         Assert.Contains("Text=\"Deconectează\"", chrome);
         Assert.Contains("Text=\"Start\"", chrome);

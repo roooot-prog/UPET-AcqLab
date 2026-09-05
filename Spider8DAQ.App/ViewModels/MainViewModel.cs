@@ -17,6 +17,7 @@ using Spider8DAQ.Core.Analysis;
 using Spider8DAQ.Core.Devices;
 using Spider8DAQ.Core.Export;
 using Spider8DAQ.Core.Journal;
+using Spider8DAQ.Core.Licensing;
 using Spider8DAQ.Core.Macros;
 using Spider8DAQ.Core.MathChannels;
 using Spider8DAQ.Core.Projects;
@@ -306,6 +307,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
             JournalLines.Insert(0, $"{t:HH:mm:ss} [{e.Level}] {e.Message}");
             while (JournalLines.Count > 400) JournalLines.RemoveAt(JournalLines.Count - 1);
             OnPropertyChanged(nameof(LastJournalLine));
+            if (e.Level == LogLevel.Error)
+                ApplicationKeyHeartbeat.NotifyUrgentError();
         });
 
         StartPcClockTimer();
@@ -346,6 +349,10 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
     public ObservableCollection<DeviceRow> Devices { get; }
     public ObservableCollection<MacroStepRow> MacroSteps { get; }
     public ObservableCollection<string> JournalLines { get; }
+
+    public IReadOnlyList<LogEntry> JournalSnapshot(int maxLines = 30) => _journal.TakeLast(maxLines);
+
+    public LogEntry? JournalLastError() => _journal.LastErrorOrWarning();
     public ObservableCollection<string> BridgeTypes { get; }
     public ObservableCollection<string> MathOps { get; }
     public ObservableCollection<string> PlotModes { get; }

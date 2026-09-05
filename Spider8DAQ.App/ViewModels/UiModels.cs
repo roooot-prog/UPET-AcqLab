@@ -38,6 +38,7 @@ public sealed class ChannelRow : INotifyPropertyChanged
     private double _gaugeOhm;
     private string? _halfConfig;
     private double _poissonRatio;
+    private double _bridgeFactor;
     private double _rangeMvPerV = 2;
     private bool _isOverflow;
     private bool _isLinkLost;
@@ -325,6 +326,12 @@ public sealed class ChannelRow : INotifyPropertyChanged
     {
         get => _poissonRatio;
         set { _poissonRatio = value; OnPropertyChanged(); }
+    }
+    /// <summary>Lab BF from Asistent Timbru (0 = derive from Bridge/HalfConfig/ν).</summary>
+    public double BridgeFactor
+    {
+        get => _bridgeFactor;
+        set { _bridgeFactor = value; OnPropertyChanged(); }
     }
     public bool ShuntEnabled { get; set; }
     private double _lastShuntReading;

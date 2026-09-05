@@ -22,7 +22,6 @@ public partial class MainViewModel
     // Stronger fills so SIM / LIVE / REC do not disappear into lab gray.
     private static readonly Brush HealthBrushRec = FreezeBrush(0xB0, 0x0C, 0x28);
     private static readonly Brush HealthBrushLive = FreezeBrush(0x05, 0x5A, 0x28); // richer/darker LIVE — white text
-    private static readonly Brush HealthBrushOk = FreezeBrush(0x00, 0x66, 0xB3);
     private static readonly Brush HealthBrushUsb = FreezeBrush(0xC4, 0x8A, 0x00);
     private static readonly Brush HealthBrushSim = FreezeBrush(0x1B, 0x4F, 0x72); // deep teal-blue — distinct from gray chrome
     private static readonly Brush HealthBrushLost = FreezeBrush(0xC8, 0x10, 0x2E);
@@ -231,9 +230,9 @@ public partial class MainViewModel
         }
         else if (IsConnected)
         {
-            text = "OK";
-            detail = $"Conectat — apăsați Start pentru semnal · {SelectedBackend} · {ConnectedDeviceLabel}";
-            brush = HealthBrushOk;
+            text = "CONN";
+            detail = $"USB/sesiune deschisă — nu confirmă alimentarea. Apăsați Start · {SelectedBackend} · {ConnectedDeviceLabel}";
+            brush = HealthBrushIdleConnected;
             SessionBadge = "CONN";
         }
         else if (SelectedBackend.Contains("Spider32", StringComparison.OrdinalIgnoreCase)

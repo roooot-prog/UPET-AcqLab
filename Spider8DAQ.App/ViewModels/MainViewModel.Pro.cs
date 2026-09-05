@@ -83,11 +83,16 @@ public partial class MainViewModel
         _watchdog?.Stop();
         _watchdog = new DeviceWatchdog(
             TryWatchdogReconnectAsync,
-            TimeSpan.FromSeconds(4),
+            TimeSpan.FromSeconds(3),
             TimeSpan.FromSeconds(1),
             isDevicePresent: IsUsbDestPresentForWatchdog,
             monitorSamples: () => IsStreaming);
         _watchdog.Enabled = WatchdogEnabled;
+        var usbTarget = SelectedBackend is "HBM USB" or "Spider32.dll"
+            || _device is HbmUsbSpider8Adapter or UsbSpider8HybridAdapter or Spider32DllAdapter or IntfacSpider8Adapter;
+        // USB DEST can stay "open" with the analog box off — do not fake-reconnect; raise lost.
+        if (usbTarget)
+            _watchdog.MaxReconnectAttempts = 0;
         _watchdog.StatusChanged += (_, msg) => _dispatcher.Invoke(() =>
         {
             var ro = msg

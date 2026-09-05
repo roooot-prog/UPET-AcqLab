@@ -4,9 +4,8 @@ namespace Spider8DAQ.Core.Sensors;
 
 /// <summary>
 /// Convert Spider8 electrical value (mV/V from OMB digits) to strain µm/m.
-/// Half Activ + timbru pasiv (compensare T°) (NI Quarter II): 4000/GF (BF=1);
-/// Half Simplu: 2000/GF; Half Poisson: 2000/(GF*(1+ν)); Half Încovoiere: 1000/GF;
-/// Full: 1000/GF; Quarter: 4000/GF.
+/// Scale = 4000/(GF·B). Lab BF (Asistent Timbru): quarter/half+dummy=1; Poisson=1+ν
+/// (B=2·BF); Half Simplu=2; Încovoiere/Full=4. R Ω does not enter Scale.
 /// </summary>
 public static class StrainScale
 {
@@ -37,32 +36,87 @@ public static class StrainScale
                || c.Contains("QuarterII", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsPoisson(string? halfConfig)
+        => !string.IsNullOrWhiteSpace(halfConfig)
+           && halfConfig.Contains("Poiss", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsIncovoiere(string? halfConfig)
+    {
+        if (string.IsNullOrWhiteSpace(halfConfig)) return false;
+        var c = halfConfig.Trim();
+        return c.Equals(HalfConfigIncovoiere, StringComparison.OrdinalIgnoreCase)
+               || c.Equals("Încovoiere", StringComparison.OrdinalIgnoreCase)
+               || c.Contains("ncovoi", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Factor de punte (BF) shown in Asistent Timbru.
+    /// Quarter / Half+dummy T°: 1; Poisson: 1+ν; Half Simplu: 2; Încovoiere / Full: 4.
+    /// </summary>
+    public static double LabBridgeFactor(BridgeType bridge, string? halfConfig, double poissonRatio)
+    {
+        var nu = poissonRatio > 0 && poissonRatio < 1 ? poissonRatio : 0.3;
+        var cfg = string.IsNullOrWhiteSpace(halfConfig) ? HalfConfigSimplu : halfConfig.Trim();
+        return bridge switch
+        {
+            BridgeType.Quarter => 1.0,
+            BridgeType.Full => 4.0, // Scale = 1000/GF = 4000/(GF·4)
+            BridgeType.Half => IsActivDummyT(cfg) ? 1.0
+                : IsPoisson(cfg) ? 1.0 + nu
+                : IsIncovoiere(cfg) ? 4.0
+                : 2.0, // Simplu
+            _ => 2.0
+        };
+    }
+
+    public static double LabBridgeFactor(string? bridge, string? halfConfig, double poissonRatio)
+    {
+        var b = Enum.TryParse<BridgeType>(bridge, true, out var parsed) ? parsed : BridgeType.Half;
+        return LabBridgeFactor(b, halfConfig, poissonRatio);
+    }
+
+    /// <summary>
+    /// Wheatstone B in Scale = 4000/(GF·B). Poisson lab BF is 1+ν, so B = 2·BF.
+    /// </summary>
+    public static double ToWheatstoneB(double labBridgeFactor, BridgeType bridge, string? halfConfig)
+    {
+        var bf = labBridgeFactor > 1e-9 ? labBridgeFactor : 1.0;
+        if (bridge == BridgeType.Half && IsPoisson(halfConfig))
+            return 2.0 * bf;
+        return bf;
+    }
+
+    public static double ToWheatstoneB(double labBridgeFactor, string? bridge, string? halfConfig)
+    {
+        var b = Enum.TryParse<BridgeType>(bridge, true, out var parsed) ? parsed : BridgeType.Half;
+        return ToWheatstoneB(labBridgeFactor, b, halfConfig);
+    }
+
+    /// <summary>Scale = 4000/(GF·B). R Ω does not enter.</summary>
+    public static double FromGaugeFactor(double gaugeFactor, double wheatstoneB)
+    {
+        var gf = gaugeFactor > 1e-9 ? gaugeFactor : 2.0;
+        var b = wheatstoneB > 1e-9 ? wheatstoneB : 1.0;
+        return 4000.0 / (gf * b);
+    }
+
+    public static double FromLabBridgeFactor(
+        BridgeType bridge, double gaugeFactor, string? halfConfig, double labBridgeFactor)
+        => FromGaugeFactor(gaugeFactor, ToWheatstoneB(labBridgeFactor, bridge, halfConfig));
+
+    public static double FromLabBridgeFactor(
+        string? bridge, double gaugeFactor, string? halfConfig, double labBridgeFactor)
+    {
+        var b = Enum.TryParse<BridgeType>(bridge, true, out var parsed) ? parsed : BridgeType.Half;
+        return FromLabBridgeFactor(b, gaugeFactor, halfConfig, labBridgeFactor);
+    }
+
     /// <summary>Engineering scale: physical = (mV/V − tare) × scale. Default Half Simplu.</summary>
     public static double FromGaugeFactor(BridgeType bridge, double gaugeFactor)
         => FromGaugeFactor(bridge, gaugeFactor, HalfConfigSimplu, 0.3);
 
     public static double FromGaugeFactor(BridgeType bridge, double gaugeFactor, string? halfConfig, double poissonRatio)
-    {
-        var gf = gaugeFactor > 1e-9 ? gaugeFactor : 2.0;
-        var nu = poissonRatio > 0 && poissonRatio < 1 ? poissonRatio : 0.3;
-        var cfg = string.IsNullOrWhiteSpace(halfConfig) ? HalfConfigSimplu : halfConfig.Trim();
-
-        return bridge switch
-        {
-            BridgeType.Quarter => 4000.0 / gf,
-            BridgeType.Full => 1000.0 / gf,
-            BridgeType.Half => IsActivDummyT(cfg)
-                ? 4000.0 / gf // NI Quarter II: one active strain arm (BF=1)
-                : cfg.Equals(HalfConfigPoisson, StringComparison.OrdinalIgnoreCase)
-                ? 2000.0 / (gf * (1.0 + nu))
-                : cfg.Equals(HalfConfigIncovoiere, StringComparison.OrdinalIgnoreCase)
-                    || cfg.Equals("Încovoiere", StringComparison.OrdinalIgnoreCase)
-                    || cfg.Equals("Incovoiere", StringComparison.OrdinalIgnoreCase)
-                    ? 1000.0 / gf
-                    : 2000.0 / gf, // Simplu (2 active equal contribution)
-            _ => 2000.0 / gf
-        };
-    }
+        => FromLabBridgeFactor(bridge, gaugeFactor, halfConfig, LabBridgeFactor(bridge, halfConfig, poissonRatio));
 
     public static double FromGaugeFactor(string? bridge, double gaugeFactor)
     {
@@ -153,5 +207,5 @@ public static class StrainScale
 
     public static string SuggestedTimbruScaleLabel(double formulaScale)
         => "Scale=" + formulaScale.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)
-           + " (4000/GF · B)";
+           + " (4000/(GF·B))";
 }

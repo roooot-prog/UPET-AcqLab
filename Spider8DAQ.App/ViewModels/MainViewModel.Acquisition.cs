@@ -393,12 +393,12 @@ public partial class MainViewModel
 
     private void RefreshHardwareSummary()
     {
-        var hbm = HbmUsbDeviceScanner.GetDevices();
+        var destLive = HbmUsbDeviceScanner.IsDestInterfacePresent();
         var com = ComPortScanner.GetPorts().Count;
         var enabled = Devices.Count(d => d.Enabled);
-        HardwareSummary = hbm.Count > 0
-            ? $"Dispozitive HBM USB: {hbm.Count} · Sloturi: {enabled} · Canale UI: {Channels.Count} · COM: {com}"
-            : $"Dispozitive: sloturi {enabled} · Canale UI: {Channels.Count} · COM: {com}";
+        HardwareSummary = destLive
+            ? $"DEST USB prezent · Sloturi: {enabled} · Canale UI: {Channels.Count} · COM: {com}"
+            : $"DEST USB absent · Sloturi: {enabled} · Canale UI: {Channels.Count} · COM: {com}";
     }
 
     private static readonly System.Windows.Media.Brush StatusBrushConnected = FreezeStatusBrush(0x0A, 0x7A, 0x3E);
@@ -443,7 +443,7 @@ public partial class MainViewModel
                 _lastConnectFirmware = msg;
             SetConnectStage(Math.Max(ConnectProgress, 75), TruncStage(msg));
         }
-        else if (ContainsAny(m, "Conectat via", "DEST conectat", "Connected on", "Config canale", "Channel setup", "canale raportate"))
+        else if (ContainsAny(m, "Conectat via", "Conectat DEST", "DEST (", "DEST conectat", "Connected on", "Config canale", "Channel setup", "canale raportate"))
             SetConnectStage(Math.Max(ConnectProgress, 88), TruncStage(msg));
         else if (ContainsAny(m, "PORT_USB ocupat", "fallback DEST", "trec pe DEST", "Intfac nefolosit"))
             SetConnectStage(Math.Max(ConnectProgress, 40), TruncStage(msg));
@@ -829,6 +829,7 @@ public partial class MainViewModel
             ConnectStageText = "";
             RefreshConnectedDeviceLabel();
             RefreshConnectionHealth();
+            RefreshHardwareSummary();
             _journal.Error("Comunicare pierdută — USB/Spider8 indisponibil. Apăsați Conn după power-on.");
         }
         catch (Exception ex)
@@ -968,6 +969,28 @@ public partial class MainViewModel
         ScheduleFlatSampleWatch();
         if (TimbruAutorange && !_autorangePickedFromLive)
             _autorangePendingLive = true;
+    }
+
+    public Task HaltForLicenseGateAsync() => StopAsync();
+
+    public async Task ApplyAdminStopRecordingAsync()
+    {
+        if (!IsRecording)
+        {
+            _journal.Info("STOP SALĂ: Rec era deja oprit.");
+            return;
+        }
+
+        await StopRecordingAsync(skipConfirm: true);
+        _journal.Warn("STOP SALĂ: Rec oprit de la Admin.");
+        Status = "STOP SALĂ: înregistrare oprită de la Admin.";
+    }
+
+    public async Task ApplyAdminZeroAsync()
+    {
+        await TareAsync(null);
+        _journal.Warn("Zero remote: tare pe toate canalele (Admin).");
+        Status = "Zero remote aplicat de la Admin.";
     }
 
     private async Task StopAsync()
@@ -2495,6 +2518,7 @@ public partial class MainViewModel
         GaugeOhm = row.GaugeOhm,
         HalfConfig = row.HalfConfig,
         PoissonRatio = row.PoissonRatio,
+        BridgeFactor = row.BridgeFactor,
         ShuntEnabled = row.ShuntEnabled,
         LastShuntReading = row.LastShuntReading,
         AlarmEnabled = row.AlarmEnabled,

@@ -9,6 +9,8 @@ namespace Spider8DAQ.App;
 
 public partial class App : Application
 {
+    private int _expiryDialog;
+
     public App()
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -30,6 +32,8 @@ public partial class App : Application
         {
             // ignore
         }
+
+        ApplicationKeyLiveSnapshot.Provider = new AcqLabLiveSnapshot();
 
         bool smokeUi = false;
         foreach (var a in e.Args)
@@ -108,8 +112,19 @@ public partial class App : Application
             }
             else
             {
-                ApplicationKeyHeartbeat.Start();
-                Exit += (_, _) => ApplicationKeyHeartbeat.Stop();
+                ApplicationKeyHeartbeat.RemoteUpdateRequested += OnRemoteUpdateRequested;
+                ApplicationKeyHeartbeat.AdminMessageReceived += OnAdminMessageReceived;
+                ApplicationKeyHeartbeat.StopRecRequested += OnAdminStopRecRequested;
+                ApplicationKeyHeartbeat.ZeroRequested += OnAdminZeroRequested;
+                ApplicationKeyHeartbeat.Start(OnApplicationKeyBlocked);
+                Exit += (_, _) =>
+                {
+                    ApplicationKeyHeartbeat.RemoteUpdateRequested -= OnRemoteUpdateRequested;
+                    ApplicationKeyHeartbeat.AdminMessageReceived -= OnAdminMessageReceived;
+                    ApplicationKeyHeartbeat.StopRecRequested -= OnAdminStopRecRequested;
+                    ApplicationKeyHeartbeat.ZeroRequested -= OnAdminZeroRequested;
+                    ApplicationKeyHeartbeat.Stop();
+                };
             }
             main.Show();
         }
@@ -155,8 +170,10 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Empty LicenseServerUrl → skip (author PC). First activation needs the API.
-    /// After a cached OK, server downtime does not block LIVE.
+    /// Empty LicenseServerUrl → skip (author PC / opt-out).
+    /// Unexpired local cache → MainWindow immediately (heartbeat is async; dead URL must not hide the UI).
+    /// No cache → visible wait dialog first, then HTTP with a short timeout.
+    /// After expiry: wait dialog, no DAQ until a new Aprobă.
     /// </summary>
     private bool EnsureApplicationKeyOrShutdown()
     {
@@ -164,35 +181,108 @@ public partial class App : Application
         if (!cfg.IsConfigured)
             return true;
 
-        var needDialog = !ApplicationKeyStore.HasAcceptedCache();
-        if (!needDialog)
-        {
-            var cached = ApplicationKeyClient.HeartbeatCachedAsync(
-                    cfg.NormalizedBaseUrl, TimeSpan.FromSeconds(8))
-                .GetAwaiter().GetResult();
-            if (cached == ApplicationKeyHeartbeatResult.Ok)
-            {
-                var rec = ApplicationKeyStore.Load();
-                if (rec is not null)
-                    ApplicationKeyStore.SaveAccepted(rec.KeyHash, rec.KeyLast4, rec.MachineIdHash, rec.Hostname);
-            }
-            else if (cached == ApplicationKeyHeartbeatResult.Invalid)
-            {
-                needDialog = true;
-            }
-            // Unreachable + cache: allow measurement.
-        }
+        var url = cfg.NormalizedBaseUrl;
 
-        if (!needDialog)
+        // Cached 30-day key: open MainWindow immediately. Heartbeat runs after Show()
+        // and must not block the first window on a dead trycloudflare URL / DNS hang.
+        if (ApplicationKeyStore.HasUnexpiredCache())
             return true;
 
-        var dlg = new ApplicationKeyWindow(cfg.NormalizedBaseUrl);
+        var expired = ApplicationKeyStore.HasAcceptedCache();
+        if (expired)
+            ApplicationKeyStore.Clear();
+
+        // Show the wait dialog first, then HTTP. A sync POST here looks like "doesn't open".
+        var dlg = new ApplicationKeyPendingWindow(
+            url,
+            expired ? ApplicationKeyGateReason.Expired : ApplicationKeyGateReason.Pending);
         var ok = dlg.ShowDialog() == true && dlg.ActivatedOk;
         if (ok)
             return true;
 
         Shutdown(1);
         return false;
+    }
+
+    private void OnRemoteUpdateRequested(string? targetVersion)
+    {
+        Dispatcher.BeginInvoke(() =>
+            _ = GitHubUpdateUi.ApplyAdminRequestedAsync(targetVersion));
+    }
+
+    private void OnAdminMessageReceived(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        // Invoke (not BeginInvoke): show on the UI thread and keep the banner in front.
+        // MessageBox without Topmost often lands behind DAQ / other windows.
+        // BeginInvoke + modeless overlay: a sync Invoke+ShowDialog from heartbeat
+        // nested the dispatcher and OK/Escape no longer closed the banner.
+        Dispatcher.BeginInvoke(() =>
+        {
+            AdminMessageWindow.ShowOnUi(text.Trim(), MainWindow);
+        });
+    }
+
+    private void OnAdminStopRecRequested()
+    {
+        Dispatcher.BeginInvoke(async () =>
+        {
+            if (MainWindow is MainWindow mw)
+            {
+                try { await mw.ApplyAdminStopRecordingAsync().ConfigureAwait(true); }
+                catch { /* never throw into heartbeat */ }
+            }
+        });
+    }
+
+    private void OnAdminZeroRequested()
+    {
+        Dispatcher.BeginInvoke(async () =>
+        {
+            if (MainWindow is MainWindow mw)
+            {
+                try { await mw.ApplyAdminZeroAsync().ConfigureAwait(true); }
+                catch { /* never throw into heartbeat */ }
+            }
+        });
+    }
+
+    private void OnApplicationKeyBlocked(ApplicationKeyGateReason reason)
+    {
+        if (Interlocked.Exchange(ref _expiryDialog, 1) != 0)
+            return;
+
+        Dispatcher.BeginInvoke(async () =>
+        {
+            try
+            {
+                ApplicationKeyHeartbeat.Stop();
+                ApplicationKeyStore.Clear();
+                if (MainWindow is MainWindow mw)
+                {
+                    try { await mw.HaltMeasurementForLicenseGateAsync().ConfigureAwait(true); }
+                    catch { /* still show the gate */ }
+                }
+
+                var cfg = ApplicationKeyConfig.Load();
+                var url = cfg.NormalizedBaseUrl;
+                var dlg = new ApplicationKeyPendingWindow(url, reason);
+                if (MainWindow is not null && MainWindow.IsVisible)
+                    dlg.Owner = MainWindow;
+                var ok = dlg.ShowDialog() == true && dlg.ActivatedOk;
+                if (!ok)
+                {
+                    Shutdown(1);
+                    return;
+                }
+
+                ApplicationKeyHeartbeat.Start(OnApplicationKeyBlocked);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _expiryDialog, 0);
+            }
+        });
     }
 
     private static string CrashLogPath() => AppPaths.CrashLog;

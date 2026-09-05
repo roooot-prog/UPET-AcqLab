@@ -12,7 +12,10 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <RootNamespace>Spider8DAQ.App</RootNamespace>
     <AssemblyName>UPETAcqLab</AssemblyName>
-    <Version>3.3.97</Version>
+        <Version>3.3.113</Version>
+    <FileVersion>3.3.113</FileVersion>
+    <AssemblyVersion>3.3.113.0</AssemblyVersion>
+    <InformationalVersion>3.3.113</InformationalVersion>
     <Title>UPET AcqLab</Title>
     <Product>UPET AcqLab - Universitatea din Petrosani</Product>
     <Company>Universitatea din Petrosani</Company>
@@ -41,6 +44,13 @@
     <None Update="license-server.json"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
+    <!-- WPF ToolTip/Popup loads this .NET Framework assembly; self-contained publish omits it. -->
+    <None Include="$(windir)\Microsoft.NET\Framework\v4.0.30319\Accessibility.dll"
+          Condition="Exists('$(windir)\Microsoft.NET\Framework\v4.0.30319\Accessibility.dll')"
+          Link="Accessibility.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
   <!-- Loose icons for .lnk + ContentFilePart fallback (Copy only - never Content, or pack:// looks on disk) -->
   <Target Name="CopyLooseAppAssets" AfterTargets="Build">

@@ -5,11 +5,13 @@ namespace Spider8DAQ.Core.Licensing;
 
 /// <summary>
 /// Single AcqLab config file next to the EXE: <c>license-server.json</c>.
-/// Empty <see cref="LicenseServerUrl"/> skips the application-key gate (author PC).
+/// Empty <see cref="LicenseServerUrl"/> skips the application-key gate and heartbeat
+/// (author PC / source tree). The lab copy that should receive Admin Mesaj must set the URL.
 /// </summary>
 public sealed class ApplicationKeyConfig
 {
     public const string FileName = "license-server.json";
+    public const string LocalLoopbackUrl = "http://127.0.0.1:5088";
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -21,11 +23,49 @@ public sealed class ApplicationKeyConfig
     [JsonPropertyName("LicenseServerUrl")]
     public string LicenseServerUrl { get; set; } = "";
 
-    public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(LicenseServerUrl);
+    /// <summary>Extra bases (LAN IP, previous tunnel). Tried after <see cref="LicenseServerUrl"/>.</summary>
+    [JsonPropertyName("LicenseServerUrls")]
+    public List<string> LicenseServerUrls { get; set; } = new();
+
+    public bool IsConfigured => CandidateUrls.Count > 0;
 
     public string NormalizedBaseUrl =>
-        (LicenseServerUrl ?? "").Trim().TrimEnd('/');
+        CandidateUrls.Count > 0 ? CandidateUrls[0] : "";
+
+    /// <summary>Unique server bases: primary URL first, then extras (e.g. LAN http://192.168.x.x:5088).</summary>
+    public IReadOnlyList<string> CandidateUrls
+    {
+        get
+        {
+            var list = new List<string>();
+            AddUnique(list, LicenseServerUrl);
+            if (LicenseServerUrls is not null)
+            {
+                foreach (var u in LicenseServerUrls)
+                    AddUnique(list, u);
+            }
+            return list;
+        }
+    }
+
+    private static void AddUnique(List<string> list, string? raw)
+    {
+        var s = (raw ?? "").Trim().TrimEnd('/');
+        if (s.Length == 0) return;
+        foreach (var existing in list)
+        {
+            if (string.Equals(existing, s, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+        list.Add(s);
+    }
+
+    /// <summary>
+    /// Configured URL, or loopback for writing next to <c>publish-v2</c>.
+    /// Heartbeat itself still requires <see cref="IsConfigured"/> (source tree stays skipped).
+    /// </summary>
+    public string ResolveHeartbeatUrl() =>
+        IsConfigured ? NormalizedBaseUrl : LocalLoopbackUrl;
 
     public static string FilePathFor(string? installRoot = null) =>
         Path.Combine(installRoot ?? AppPaths.InstallRoot, FileName);
