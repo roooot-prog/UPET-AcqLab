@@ -121,6 +121,34 @@ public class GitHubPrivateUpdaterTests
         Assert.Contains("robocopy", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("WAITPID", script, StringComparison.Ordinal);
         Assert.Contains("start \"\"", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/XF license-server.json", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void StripUnconfiguredLicenseJson_deletes_empty_keeps_urls()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "upet_lic_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var empty = Path.Combine(root, "empty");
+            Directory.CreateDirectory(empty);
+            File.WriteAllText(Path.Combine(empty, "license-server.json"), """{"LicenseServerUrl":""}""");
+            GitHubPrivateUpdater.StripUnconfiguredLicenseJson(empty);
+            Assert.False(File.Exists(Path.Combine(empty, "license-server.json")));
+
+            var lab = Path.Combine(root, "lab");
+            Directory.CreateDirectory(lab);
+            File.WriteAllText(
+                Path.Combine(lab, "license-server.json"),
+                """{"LicenseServerUrl":"http://192.168.0.61:5088"}""");
+            GitHubPrivateUpdater.StripUnconfiguredLicenseJson(lab);
+            Assert.True(File.Exists(Path.Combine(lab, "license-server.json")));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]

@@ -204,10 +204,10 @@ public class ApplicationKeyTests
     }
 
     [Fact]
-    public void Licensed_heartbeat_is_2_seconds_and_live_is_1_ms()
+    public void Licensed_heartbeat_is_2_seconds_and_live_is_200_ms()
     {
         Assert.Equal(TimeSpan.FromSeconds(2), ApplicationKeyHeartbeat.LicensedInterval);
-        Assert.Equal(TimeSpan.FromMilliseconds(1), ApplicationKeyHeartbeat.LiveInterval);
+        Assert.Equal(TimeSpan.FromMilliseconds(200), ApplicationKeyHeartbeat.LiveInterval);
     }
 
     [Fact]

@@ -2,11 +2,11 @@ using System.Diagnostics;
 
 namespace Spider8DAQ.Core.Licensing;
 
-/// <summary>License heartbeat ~2s (commands) + live twin ~1 ms (latest DAQ sample, 1 in-flight HTTP).</summary>
+/// <summary>License heartbeat ~2s (commands) + live twin ~200 ms (latest DAQ sample, one HTTP at a time).</summary>
 public static class ApplicationKeyHeartbeat
 {
     public static readonly TimeSpan LicensedInterval = TimeSpan.FromSeconds(2);
-    public static readonly TimeSpan LiveInterval = TimeSpan.FromMilliseconds(1);
+    public static readonly TimeSpan LiveInterval = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan LiveTimeout = TimeSpan.FromMilliseconds(400);
     private static readonly TimeSpan UrgentMinInterval = TimeSpan.FromSeconds(45);
@@ -18,7 +18,7 @@ public static class ApplicationKeyHeartbeat
     private static Action? _onStopRec;
     private static Action? _onZero;
     private static DateTime _lastUrgentUtc = DateTime.MinValue;
-    private static bool _timerHeld;
+    private static string? _lastGoodUrl;
 
     /// <summary>Admin requested GitHub update (target tag, or null = latest).</summary>
     public static event Action<string?>? RemoteUpdateRequested
@@ -59,8 +59,6 @@ public static class ApplicationKeyHeartbeat
         lock (Gate)
         {
             Stop();
-            NativeTimerResolution.Request1Ms();
-            _timerHeld = true;
             _onBlocked = onBlocked;
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
@@ -76,11 +74,6 @@ public static class ApplicationKeyHeartbeat
             try { _cts?.Cancel(); } catch { /* ignore */ }
             try { _cts?.Dispose(); } catch { /* ignore */ }
             _cts = null;
-            if (_timerHeld)
-            {
-                NativeTimerResolution.Release();
-                _timerHeld = false;
-            }
         }
     }
 
@@ -157,12 +150,13 @@ public static class ApplicationKeyHeartbeat
     {
         try
         {
-            foreach (var raw in baseUrls)
+            foreach (var url in PreferLastGood(baseUrls))
             {
-                var url = (raw ?? "").Trim().TrimEnd('/');
-                if (url.Length == 0) continue;
                 if (await ApplicationKeyClient.LiveCachedAsync(url, LiveTimeout, ct).ConfigureAwait(false))
+                {
+                    _lastGoodUrl = url;
                     return;
+                }
             }
         }
         catch
@@ -173,14 +167,15 @@ public static class ApplicationKeyHeartbeat
 
     private static async Task HeartbeatFirstAsync(IReadOnlyList<string> baseUrls, CancellationToken ct)
     {
-        foreach (var raw in baseUrls)
-        {
-            var url = (raw ?? "").Trim().TrimEnd('/');
-            if (url.Length == 0) continue;
-            var r = await ApplicationKeyClient.HeartbeatCachedAsync(url, Timeout, ct).ConfigureAwait(false);
-            if (r != ApplicationKeyHeartbeatResult.Unreachable)
-                return;
-        }
+            foreach (var url in PreferLastGood(baseUrls))
+            {
+                var r = await ApplicationKeyClient.HeartbeatCachedAsync(url, Timeout, ct).ConfigureAwait(false);
+                if (r != ApplicationKeyHeartbeatResult.Unreachable)
+                {
+                    _lastGoodUrl = url;
+                    return;
+                }
+            }
     }
 
     private static async Task SendQuietAsync(IReadOnlyList<string> baseUrls, CancellationToken ct)
@@ -190,16 +185,17 @@ public static class ApplicationKeyHeartbeat
             ApplicationKeyHeartbeatDetail detail = ApplicationKeyHeartbeatDetail.From(
                 ApplicationKeyHeartbeatResult.Unreachable);
             string? baseUrl = null;
-            foreach (var raw in baseUrls)
+            foreach (var url in PreferLastGood(baseUrls))
             {
-                var url = (raw ?? "").Trim().TrimEnd('/');
-                if (url.Length == 0) continue;
                 var next = await ApplicationKeyClient.HeartbeatCachedDetailAsync(url, Timeout, ct)
                     .ConfigureAwait(false);
                 detail = next;
                 baseUrl = url;
                 if (next.Result != ApplicationKeyHeartbeatResult.Unreachable)
+                {
+                    _lastGoodUrl = url;
                     break;
+                }
             }
             if (baseUrl is null)
                 return;
@@ -322,5 +318,20 @@ public static class ApplicationKeyHeartbeat
         if (cb is null) return;
         try { cb(reason); }
         catch { /* never throw into heartbeat */ }
+    }
+
+    private static IEnumerable<string> PreferLastGood(IReadOnlyList<string> baseUrls)
+    {
+        var last = _lastGoodUrl;
+        if (!string.IsNullOrWhiteSpace(last))
+            yield return last;
+        foreach (var raw in baseUrls)
+        {
+            var url = (raw ?? "").Trim().TrimEnd('/');
+            if (url.Length == 0) continue;
+            if (string.Equals(url, last, StringComparison.OrdinalIgnoreCase))
+                continue;
+            yield return url;
+        }
     }
 }

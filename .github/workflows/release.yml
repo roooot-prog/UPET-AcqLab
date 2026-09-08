@@ -48,6 +48,17 @@ jobs:
           -p:PublishSingleFile=false
           -o publish-v2
 
+      - name: Overlay lab license-server.json
+        shell: pwsh
+        run: |
+          $overlay = Join-Path (Get-Location) 'tools\license-server.release.json'
+          $dest = Join-Path (Get-Location) 'publish-v2\license-server.json'
+          if (-not (Test-Path $overlay)) { throw "Lipseste tools/license-server.release.json (URL-uri Admin pentru laboratoare)." }
+          $j = Get-Content $overlay -Raw | ConvertFrom-Json
+          if (-not $j.LicenseServerUrl) { throw "tools/license-server.release.json trebuie sa aiba LicenseServerUrl." }
+          Copy-Item $overlay $dest -Force
+          Write-Host "license-server.json in zip: $($j.LicenseServerUrl)"
+
       - name: Zip publish folder
         shell: pwsh
         run: |

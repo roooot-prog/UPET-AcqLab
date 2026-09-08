@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Spider8DAQ.Core.Licensing;
 
 namespace Spider8DAQ.Core.Updates;
 
@@ -385,6 +386,10 @@ public sealed class GitHubPrivateUpdater : IDisposable
         if (!Directory.EnumerateFileSystemEntries(sourceDir).Any())
             throw new InvalidOperationException("Arhiva de actualizare este goală.");
 
+        // Empty source json must not wipe a lab's LAN/Cloudflare URLs.
+        // A packed json with URLs is copied (so GitHub update can refresh the list).
+        StripUnconfiguredLicenseJson(sourceDir);
+
         var scriptPath = Path.Combine(Path.GetDirectoryName(zipPath) ?? AppPaths.Updates, ApplyScriptName);
         File.WriteAllText(scriptPath, BuildApplyScript(), Encoding.ASCII);
 
@@ -432,6 +437,21 @@ public sealed class GitHubPrivateUpdater : IDisposable
             _http.Dispose();
     }
 
+    /// <summary>
+    /// Drop a packed <c>license-server.json</c> that has no URLs (author source
+    /// tree). Configured json stays in the overlay so labs pick up LAN/Cloudflare.
+    /// </summary>
+    public static void StripUnconfiguredLicenseJson(string sourceDir)
+    {
+        var path = Path.Combine(sourceDir, ApplicationKeyConfig.FileName);
+        if (!File.Exists(path)) return;
+        if (!ApplicationKeyConfig.Load(sourceDir).IsConfigured)
+            File.Delete(path);
+    }
+
+    /// <summary>
+    /// Overlay zip files onto the install folder after the running exe exits.
+    /// </summary>
     public static string BuildApplyScript() =>
         """
         @echo off
