@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Spider8DAQ.App.Integrations;
 using Spider8DAQ.Core;
+using Spider8DAQ.Core.Export;
 using Spider8DAQ.Core.Integrations;
 
 namespace Spider8DAQ.App.ViewModels;
@@ -10,11 +12,17 @@ namespace Spider8DAQ.App.ViewModels;
 public partial class MainViewModel
 {
     private LabCameraHub? _camera;
+    private LabUsbCameraService? _usbCamera;
     private ThirdPartyExportSettings _integrations = new();
     private string _cameraStatus = "Cameră: opțional — atașați imagini sau urmăriți un folder.";
     private string _integrationStatus = "Integrări 3rd-party: dezactivate.";
     private bool _cameraWatchDuringRecord = true;
     private string _cameraWatchFolder = "";
+    private bool _experimentVideoEnabled;
+    private string _experimentCameraId = "";
+    private string _experimentCameraName = "";
+    private string _experimentVideoPath = "";
+    private readonly List<string> _experimentVideoFiles = new();
 
     public ObservableCollection<string> CameraShots { get; } = new();
 
@@ -29,6 +37,42 @@ public partial class MainViewModel
 
     public string CameraStatus { get => _cameraStatus; set { _cameraStatus = value; OnPropertyChanged(); } }
     public string IntegrationStatus { get => _integrationStatus; set { _integrationStatus = value; OnPropertyChanged(); } }
+
+    public bool ExperimentVideoEnabled
+    {
+        get => _experimentVideoEnabled;
+        set
+        {
+            _experimentVideoEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ExperimentBannerText));
+        }
+    }
+
+    public string ExperimentCameraId
+    {
+        get => _experimentCameraId;
+        set { _experimentCameraId = value ?? ""; OnPropertyChanged(); }
+    }
+
+    public string ExperimentCameraName
+    {
+        get => _experimentCameraName;
+        set
+        {
+            _experimentCameraName = value ?? "";
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ExperimentBannerText));
+        }
+    }
+
+    public string ExperimentVideoPath
+    {
+        get => _experimentVideoPath;
+        set { _experimentVideoPath = value ?? ""; OnPropertyChanged(); }
+    }
+
+    public IReadOnlyList<string> ExperimentVideoFiles => _experimentVideoFiles;
 
     public bool CameraWatchDuringRecord
     {
@@ -83,6 +127,26 @@ public partial class MainViewModel
             CameraStatus = $"Snapshot: {Path.GetFileName(path)}";
         });
 
+        try
+        {
+            _usbCamera = new LabUsbCameraService(_dispatcher);
+            _usbCamera.DevicesChanged += (_, _) => _dispatcher.BeginInvoke(() =>
+            {
+                if (!IsRecording)
+                    RefreshExperimentCameraStatus();
+            });
+            _usbCamera.StatusChanged += (_, text) => _dispatcher.BeginInvoke(() =>
+            {
+                CameraStatus = text;
+                Status = text;
+            });
+        }
+        catch (Exception ex)
+        {
+            _usbCamera = null;
+            CameraStatus = "Cameră USB indisponibilă: " + ex.Message;
+        }
+
         _integrations = ThirdPartyExporter.Load();
         OnPropertyChanged(nameof(IntegrationEnabled));
         OnPropertyChanged(nameof(IntegrationOutboundFolder));
@@ -129,6 +193,116 @@ public partial class MainViewModel
         TestIntegrationsCommand = new RelayCommand(async () => await RunThirdPartyExportAsync(force: true));
 
         RefreshCameraShots();
+        RefreshExperimentCameraStatus();
+    }
+
+    private void RefreshExperimentCameraStatus()
+    {
+        if (_usbCamera is null)
+        {
+            if (!ExperimentVideoEnabled) return;
+            CameraStatus = "Film experiment: serviciu cameră indisponibil.";
+            return;
+        }
+
+        CameraStatus = ExperimentVideoEnabled
+            ? "Film experiment: " + _usbCamera.StatusSummary(ExperimentCameraId)
+            : _usbCamera.StatusSummary();
+        OnPropertyChanged(nameof(ExperimentBannerText));
+    }
+
+    private void RememberExperimentVideo(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        ExperimentVideoPath = path;
+        if (!_experimentVideoFiles.Contains(path, StringComparer.OrdinalIgnoreCase))
+            _experimentVideoFiles.Add(path);
+    }
+
+    private void ClearExperimentVideos()
+    {
+        _experimentVideoFiles.Clear();
+        ExperimentVideoPath = "";
+    }
+
+    private void ApplyExperimentVideoFromMeta(Spider8DAQ.Core.Projects.ProjectMeta? meta)
+    {
+        ExperimentVideoEnabled = meta?.ExperimentVideoEnabled == true;
+        ExperimentCameraId = meta?.ExperimentCameraId ?? "";
+        ExperimentCameraName = meta?.ExperimentCameraName ?? "";
+        ExperimentVideoPath = meta?.ExperimentVideoPath ?? "";
+        _experimentVideoFiles.Clear();
+        if (meta?.ExperimentVideoFiles is { Count: > 0 })
+        {
+            foreach (var p in meta.ExperimentVideoFiles)
+            {
+                if (!string.IsNullOrWhiteSpace(p) && !_experimentVideoFiles.Contains(p, StringComparer.OrdinalIgnoreCase))
+                    _experimentVideoFiles.Add(p);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(ExperimentVideoPath))
+            _experimentVideoFiles.Add(ExperimentVideoPath);
+    }
+
+    private void WriteExperimentVideoToMeta(Spider8DAQ.Core.Projects.ProjectMeta meta)
+    {
+        meta.ExperimentVideoEnabled = ExperimentVideoEnabled;
+        meta.ExperimentCameraId = ExperimentCameraId ?? "";
+        meta.ExperimentCameraName = ExperimentCameraName ?? "";
+        meta.ExperimentVideoPath = ExperimentVideoPath ?? "";
+        meta.ExperimentVideoFiles = _experimentVideoFiles.ToList();
+    }
+
+    private async Task StartExperimentVideoForRecordingAsync(string csvPath)
+    {
+        if (!ExperimentVideoEnabled || _usbCamera is null)
+            return;
+
+        try
+        {
+            var stamp = IsExperimentActive && ExperimentStartedAt is { } expStamp
+                ? expStamp
+                : DateTime.Now;
+            var dir = Path.GetDirectoryName(csvPath) ?? GetWritableRecordingsDirectory();
+            var name = ExperimentFileNaming.BuildFileName(SampleId, stamp, ExperimentFileNaming.RoleVideo, ".mp4");
+            var dest = ExperimentFileNaming.UniquePath(Path.Combine(dir, name));
+            var result = await _usbCamera.StartRecordingAsync(ExperimentCameraId, dest).ConfigureAwait(true);
+            if (result.Ok)
+            {
+                RememberExperimentVideo(result.Path);
+                CameraStatus = result.Message;
+                _journal.Info("Film experiment: " + result.Path);
+            }
+            else
+            {
+                CameraStatus = result.Message;
+                _journal.Warn(result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            CameraStatus = "Filmare epruvetă eșuată: " + ex.Message;
+            _journal.Warn(CameraStatus);
+        }
+    }
+
+    private async Task StopExperimentVideoForRecordingAsync()
+    {
+        if (_usbCamera is null || !_usbCamera.IsRecordingVideo)
+            return;
+        try
+        {
+            var result = await _usbCamera.StopRecordingAsync().ConfigureAwait(true);
+            if (result.Ok)
+                RememberExperimentVideo(result.Path);
+            else if (!string.IsNullOrWhiteSpace(result.Message))
+                CameraStatus = result.Message;
+        }
+        catch (Exception ex)
+        {
+            CameraStatus = "Oprire film eșuată: " + ex.Message;
+            _journal.Warn(CameraStatus);
+        }
     }
 
     private void RefreshCameraShots()
@@ -187,6 +361,7 @@ public partial class MainViewModel
 
     private async Task OnRecordingStoppedForIntegrationsAsync(string? csvPath)
     {
+        await StopExperimentVideoForRecordingAsync();
         _camera?.StopWatching();
         var shots = _camera?.SessionShots.Count ?? 0;
         if (shots > 0)

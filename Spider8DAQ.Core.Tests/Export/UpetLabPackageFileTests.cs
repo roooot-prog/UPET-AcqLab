@@ -61,4 +61,33 @@ public class UpetLabPackageFileTests
             try { File.Delete(path); } catch { /* ignore */ }
         }
     }
+
+    [Fact]
+    public void CopyExperimentVideos_AddsMp4NextToCsv()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "upet_vid_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var mp4 = Path.Combine(dir, "proba_video.mp4");
+        File.WriteAllBytes(mp4, [0, 0, 0, 1]);
+        var staging = Path.Combine(dir, "pack");
+        Directory.CreateDirectory(staging);
+        var included = new List<string>();
+        try
+        {
+            LabPackageBuilder.CopyExperimentVideos(
+                new Spider8DAQ.Core.Projects.ProjectMeta
+                {
+                    ExperimentVideoPath = mp4,
+                    ExperimentVideoFiles = { mp4 }
+                },
+                staging,
+                included);
+            Assert.Contains("proba_video.mp4", included);
+            Assert.True(File.Exists(Path.Combine(staging, "proba_video.mp4")));
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { /* ignore */ }
+        }
+    }
 }

@@ -29,6 +29,9 @@ public class ExperimentFileNamingTests
         Assert.Equal(
             "proba_20260815_153012_industrial.pdf",
             ExperimentFileNaming.BuildFileName("proba", when, ExperimentFileNaming.RoleIndustrial, ".pdf"));
+        Assert.Equal(
+            "proba_20260815_153012_video.mp4",
+            ExperimentFileNaming.BuildFileName("proba", when, ExperimentFileNaming.RoleVideo, ".mp4"));
     }
 
     [Fact]

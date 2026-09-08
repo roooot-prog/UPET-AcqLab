@@ -14,6 +14,8 @@ public static class ExperimentFileNaming
     public const string RoleRaport = "raport";
     /// <summary>Industrial lab PDF: <c>{stem}_industrial.pdf</c>.</summary>
     public const string RoleIndustrial = "industrial";
+    /// <summary>Clip epruvetă pe durata Record: <c>{stem}_video.mp4</c>.</summary>
+    public const string RoleVideo = "video";
 
     public static string SanitizeToken(string? raw, string fallback = "proba")
     {

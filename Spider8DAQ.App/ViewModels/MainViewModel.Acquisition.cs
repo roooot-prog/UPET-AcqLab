@@ -1491,6 +1491,7 @@ public partial class MainViewModel
             LastRecordingPath = path;
             IsRecording = true;
             OnRecordingStartedForIntegrations(path);
+            await StartExperimentVideoForRecordingAsync(path);
             RefreshWorkflowStepsOnly();
             var mode = RecordStopMode;
             var storageHint = peak ? $" · Peak {PeakIntervalSeconds:0.##}s" : "";
@@ -1502,6 +1503,8 @@ public partial class MainViewModel
                 "Threshold" => $"Înregistrare până |CH{RecordThresholdChannel}| ≥ {RecordThresholdValue:0.####}{storageHint} → {path}",
                 _ => $"Înregistrare (stop manual){storageHint} → {path}"
             };
+            if (_usbCamera?.IsRecordingVideo == true)
+                Status += " · film epruvetă";
             StatsJournalStatus = StatsJournalEnabled
                 ? $"Jurnal statistici ON ({StatsIntervalSeconds:0.#}s)"
                 : "Jurnal statistici OFF";

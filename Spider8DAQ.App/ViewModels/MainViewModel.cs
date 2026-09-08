@@ -227,6 +227,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
         try
         {
             WireCommands();
+            WireAnalysisVideoCommands();
             WireAdvancedCommands();
             WireProCommands();
             WireEasyCommands();
@@ -959,7 +960,12 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
             ? "Niciun experiment activ"
             : $"Experiment activ: {ProjectName} · {OperatorName} · {SampleId} · {ExperimentStartedAt:HH:mm:ss}" +
               (HasMontagePhoto ? " · montaj înainte" : "") +
-              (HasMontagePhotoAfter ? " · probă după" : "");
+              (HasMontagePhotoAfter ? " · probă după" : "") +
+              (ExperimentVideoEnabled
+                  ? (string.IsNullOrWhiteSpace(ExperimentCameraName)
+                      ? " · film la Rec"
+                      : " · film " + ExperimentCameraName)
+                  : "");
     public int CursorA { get => _cursorA; set { _cursorA = value; OnPropertyChanged(); SyncCursorsToOffline(); } }
     public int CursorB { get => _cursorB; set { _cursorB = value; OnPropertyChanged(); SyncCursorsToOffline(); } }
 
@@ -1292,6 +1298,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
         CancelMacro();
         StopWatchdog();
         _playbackTimer?.Stop();
+        AnalysisStop();
         if (_defectScanTimer is not null)
         {
             _defectScanTimer.Stop();
@@ -1303,6 +1310,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IAsyncDisposable, M
             _pcClockTimer = null;
         }
         _camera?.Dispose();
+        _usbCamera?.Dispose();
         await DisconnectAsync();
         await _engine.DisposeAsync();
         if (_db is not null) await _db.DisposeAsync();

@@ -272,6 +272,58 @@ public sealed class OfflineSession
         RecomputeStats();
     }
 
+    /// <summary>Seconds from first sample (wall clock). Falls back to index / Hz if stamps are flat.</summary>
+    public double TimeSecondsAt(int index, double fallbackHz = 50)
+    {
+        if (Timestamps.Count == 0) return 0;
+        index = Math.Clamp(index, 0, Timestamps.Count - 1);
+        var span = (Timestamps[index] - Timestamps[0]).TotalSeconds;
+        if (span > 1e-9 && !double.IsNaN(span) && !double.IsInfinity(span))
+            return span;
+        return index / Math.Max(1.0, fallbackHz);
+    }
+
+    public double DurationSeconds(double fallbackHz = 50)
+    {
+        if (Timestamps.Count <= 1)
+            return 0;
+        var span = (Timestamps[^1] - Timestamps[0]).TotalSeconds;
+        if (span > 1e-9 && !double.IsNaN(span) && !double.IsInfinity(span))
+            return span;
+        return (Timestamps.Count - 1) / Math.Max(1.0, fallbackHz);
+    }
+
+    public int IndexAtTimeSeconds(double t, double fallbackHz = 50)
+    {
+        if (Timestamps.Count == 0) return 0;
+        if (t <= 0) return 0;
+        var duration = DurationSeconds(fallbackHz);
+        if (t >= duration) return Timestamps.Count - 1;
+
+        var span = (Timestamps[^1] - Timestamps[0]).TotalSeconds;
+        if (span <= 1e-9 || double.IsNaN(span) || double.IsInfinity(span))
+            return Math.Clamp((int)Math.Round(t * Math.Max(1.0, fallbackHz)), 0, Timestamps.Count - 1);
+
+        var target = Timestamps[0].AddSeconds(t);
+        var lo = 0;
+        var hi = Timestamps.Count - 1;
+        while (lo < hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (Timestamps[mid] < target) lo = mid + 1;
+            else hi = mid;
+        }
+
+        if (lo > 0)
+        {
+            var d0 = Math.Abs((Timestamps[lo - 1] - target).TotalSeconds);
+            var d1 = Math.Abs((Timestamps[lo] - target).TotalSeconds);
+            if (d0 <= d1) return lo - 1;
+        }
+
+        return lo;
+    }
+
     public LinearFitResult FitXy(int xChannel, int yChannel)
     {
         if (xChannel < 0 || yChannel < 0 || xChannel >= Columns.Count || yChannel >= Columns.Count)

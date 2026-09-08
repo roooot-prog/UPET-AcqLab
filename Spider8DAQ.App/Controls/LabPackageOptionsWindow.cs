@@ -77,7 +77,7 @@ public sealed class LabPackageOptionsWindow : Window
         var body = new StackPanel();
         body.Children.Add(new TextBlock
         {
-            Text = "Pachetul include: README, CSV, poze montaj, raport .upet, Excel și HTML (dacă reușesc).",
+            Text = "Pachetul include: README, CSV, poze montaj, clip film (dacă ați filmat la Rec), raport .upet, Excel și HTML (dacă reușesc).",
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 10),
             FontSize = 13

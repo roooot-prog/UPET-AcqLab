@@ -656,6 +656,7 @@ public partial class MainViewModel
         LastRecordingPath = LastRecordingPath
         };
         WriteSpecimenToMeta(p.Meta);
+        WriteExperimentVideoToMeta(p.Meta);
         return p;
     }
 
@@ -689,6 +690,7 @@ public partial class MainViewModel
             ? SampleDimensions.BuildSummary(project.Meta)
             : project.Meta.SampleDimensionsSummary;
         ReadSpecimenFromMeta(project.Meta);
+        ApplyExperimentVideoFromMeta(project.Meta);
         MontagePhotoPath = project.Meta.MontagePhotoPath ?? "";
         MontagePhotoAfterPath = project.Meta.MontagePhotoAfterPath ?? "";
         MontageBeforeNotes = project.Meta.MontageBeforeNotes ?? "";
@@ -1181,6 +1183,8 @@ public partial class MainViewModel
                     included.Add(name);
                 }
 
+                LabPackageBuilder.CopyExperimentVideos(meta, staging, included);
+
                 var upetName = ExperimentFileNaming.BuildFileName(
                     sampleId, stamp, ExperimentFileNaming.RoleRaport, UpetReportFile.Extension);
                 try
@@ -1315,13 +1319,27 @@ public partial class MainViewModel
             if (Directory.Exists(outDir))
                 outDir += "_" + DateTime.Now.ToString("HHmmss");
             LabPackageBuilder.ExtractZipBytes(zipBytes, outDir);
+            _analysisVideoSearchDir = outDir;
 
             var upet = Directory.EnumerateFiles(outDir, "*" + UpetReportFile.Extension, SearchOption.TopDirectoryOnly)
                 .FirstOrDefault();
             if (upet is not null)
                 TryOpenUpetReportPath(upet);
+            else
+            {
+                var csv = Directory.EnumerateFiles(outDir, "*.csv", SearchOption.TopDirectoryOnly).FirstOrDefault();
+                if (csv is not null)
+                {
+                    _offline = OfflineSession.FromCsv(csv);
+                    ImportRecordingMarksFromCsv(csv);
+                    RefreshAnalysisUi();
+                    RequestAnalysisTab?.Invoke(this, EventArgs.Empty);
+                }
+            }
 
-            Status = $"Pachet extras: {outDir}" + (upet is not null ? " · .upet încărcat în Analiză" : "");
+            BindAnalysisVideoFromSession(outDir);
+
+            Status = $"Pachet extras: {outDir}" + (HasAnalysisVideo ? " · clip încărcat în Analiză" : (upet is not null ? " · .upet încărcat în Analiză" : ""));
             _journal.Info(Status);
             try
             {
@@ -1373,6 +1391,7 @@ public partial class MainViewModel
             ? SampleDimensions.BuildSummary(m)
             : m.SampleDimensionsSummary;
         ReadSpecimenFromMeta(m);
+        ApplyExperimentVideoFromMeta(m);
         if (!string.IsNullOrWhiteSpace(m.MeasurementFingerprint))
             MeasurementFingerprint = m.MeasurementFingerprint;
     }
@@ -2068,6 +2087,7 @@ public partial class MainViewModel
                 : Core.Export.MeasurementFingerprint.Algorithm
         };
         WriteSpecimenToMeta(meta);
+        WriteExperimentVideoToMeta(meta);
         SampleDimensions.ApplyComputedFields(meta);
         CylinderContourExport.EnsureConfig(
             meta,
@@ -2141,7 +2161,8 @@ public partial class MainViewModel
             specimenYoungGPa: SpecimenYoungGPa,
             specimenPoissonNu: SpecimenPoissonNu,
             specimenNotes: SpecimenNotes,
-            simulatorContourDemo: string.Equals(SelectedBackend, "Simulator", StringComparison.OrdinalIgnoreCase))
+            simulatorContourDemo: string.Equals(SelectedBackend, "Simulator", StringComparison.OrdinalIgnoreCase),
+            usbCamera: _usbCamera)
         {
             Owner = owner
         };
@@ -2203,6 +2224,10 @@ public partial class MainViewModel
         MontagePhotoAfterPath = "";
         MontageAfterNotes = "";
         MontageAfterCapturedAt = null;
+        ExperimentVideoEnabled = dlg.ExperimentVideoEnabledValue;
+        ExperimentCameraId = dlg.ExperimentCameraIdValue ?? "";
+        ExperimentCameraName = dlg.ExperimentCameraNameValue ?? "";
+        ClearExperimentVideos();
         IsExperimentActive = true;
         if (dlg.SelectedPreset is not null)
             SelectedExperiment = dlg.SelectedPreset;
@@ -2218,6 +2243,11 @@ public partial class MainViewModel
         ApplyContourSimDemoSetup();
 
         var photo = HasMontagePhoto ? " · montaj înainte" : "";
+        var film = ExperimentVideoEnabled
+            ? (string.IsNullOrWhiteSpace(ExperimentCameraName)
+                ? " · film la Rec"
+                : " · film " + ExperimentCameraName)
+            : "";
         var dur = EstimatedDurationMinutes > 0 ? $" · durată est. {EstimatedDurationMinutes} min" : "";
         var dims = string.IsNullOrWhiteSpace(SampleDimensionsSummary) ? "" : " · " + SampleDimensionsSummary;
         var specimen = SpecimenIdentification.HasMeaningfulSpecimenText(SpecimenSummary)
@@ -2229,7 +2259,7 @@ public partial class MainViewModel
             : "";
         Status =
             $"Experiment pornit: {ProjectName} · {ExperimentType} · {OperatorName} · {SampleId} · " +
-            $"{ExperimentStartedAt:yyyy-MM-dd HH:mm:ss}{dur}{dims}{specimen}{contour}{simAssign}{photo}" +
+            $"{ExperimentStartedAt:yyyy-MM-dd HH:mm:ss}{dur}{dims}{specimen}{contour}{simAssign}{photo}{film}" +
             (applied > 0 ? $" · senzori aplicați pe {applied} canal(e)" : "");
         _journal.Info(Status);
         HelpPanelText =
@@ -2240,7 +2270,7 @@ public partial class MainViewModel
                       "Rampă 0→țintă u [mm] în exact 10 s, apoi stop înregistrare. L0/Ø rămân cele setate. Repartizarea apare după Start."
                     : "Contur cilindru: la export Excel/PDF apare schema industrială (plan, elevație, secțiune, Contur la Fmax, u_max, tabel u_i, mini F-cursă). " +
                       "Index: forță → Cursor B → |cursă| (fără forță: index = max cursă) → media |u|.")
-                : "Start experiment: dimensiuni / greutate / poza montaj sunt opționale. La «Închide» puteți adăuga (tot opțional) poza după + observații.";
+                : "Start experiment: dimensiuni / greutate / poza montaj sunt opționale. Film USB (sub poză) pornește automat la Rec. La «Închide» puteți adăuga (tot opțional) poza după + observații.";
         PushSimulatorScenarioHint();
         try
         {
@@ -2329,7 +2359,8 @@ public partial class MainViewModel
             (realMin > 0 ? $" · durată reală {realMin:0.#} min" : "") +
             (HasMontagePhoto ? " · montaj înainte" : "") +
             (HasMontagePhotoAfter ? " · probă după" : "") +
-            (!string.IsNullOrWhiteSpace(MontageAfterNotes) ? " · observații" : "");
+            (!string.IsNullOrWhiteSpace(MontageAfterNotes) ? " · observații" : "") +
+            (_experimentVideoFiles.Count > 0 ? $" · {_experimentVideoFiles.Count} clip(uri)" : "");
         _journal.Info(Status);
         HelpPanelText =
             "Experiment închis. Pozele rămân disponibile pentru export; Exp pornește un experiment nou.";
@@ -2402,7 +2433,9 @@ public partial class MainViewModel
         CutEnd = Math.Max(CutEnd, _offline.Timestamps.Count);
         AnalysisSummary = $"{_offline.Timestamps.Count} samples / {_offline.ChannelNames.Count} channels";
         UpdateDeltaText();
+        ResetAnalysisPlayheadForNewSession();
         RefreshAnalysisPlot();
+        BindAnalysisVideoFromSession();
     }
 
     private void SyncCursorsToOffline()
@@ -2423,6 +2456,7 @@ public partial class MainViewModel
     private void RefreshAnalysisPlot(IReadOnlyList<int>? peaks = null)
     {
         if (_plotAnalysis is null || _offline is null) return;
+        _analysisRevealSeries.Clear();
         _plotAnalysis.Plot.Clear();
         _crosshairA = _plotAnalysis.Plot.Add.Crosshair(CursorA, 0);
         _crosshairB = _plotAnalysis.Plot.Add.Crosshair(CursorB, 0);
@@ -2439,6 +2473,7 @@ public partial class MainViewModel
             sig.LegendText = _offline.ChannelNames[c];
             sig.Color = colors[c % colors.Length];
             sig.MarkerSize = 0;
+            _analysisRevealSeries.Add(sig);
         }
         if (peaks is { Count: > 0 } && AnalysisChannel < _offline.Columns.Count)
         {
@@ -2461,7 +2496,18 @@ public partial class MainViewModel
         }
         ApplyUnloadMarkersToAnalysisPlot();
         _plotAnalysis.Plot.ShowLegend();
+        var fullLast = Math.Max(0, _offline.Timestamps.Count - 1);
+        foreach (var s in _analysisRevealSeries)
+        {
+            try { s.MaxRenderIndex = fullLast; }
+            catch { /* ignore */ }
+        }
+        // Scale to the full recording first, then clip the trace to the playhead
+        // so the red line travels across a fixed time axis instead of shrinking it.
         _plotAnalysis.Plot.Axes.AutoScale();
+        var limits = _plotAnalysis.Plot.Axes.GetLimits();
+        ResetAnalysisPlayheadAfterPlotClear();
+        _plotAnalysis.Plot.Axes.SetLimits(limits);
         _plotAnalysis.Refresh();
     }
 

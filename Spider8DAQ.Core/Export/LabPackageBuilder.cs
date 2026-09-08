@@ -49,6 +49,8 @@ public static class LabPackageBuilder
         Line(sb, "Comentariu", meta.Comment);
         Line(sb, "Note montaj înainte", meta.MontageBeforeNotes);
         Line(sb, "Note montaj după", meta.MontageAfterNotes);
+        Line(sb, "Cameră film experiment", meta.ExperimentCameraName);
+        Line(sb, "Clip experiment", Path.GetFileName(meta.ExperimentVideoPath ?? ""));
         Line(sb, "Calibrare", meta.CalibrationNotes);
         Line(sb, "Amprentă măsurare", meta.MeasurementFingerprint);
         Line(sb, "Amprentă algo", meta.FingerprintAlgo);
@@ -77,7 +79,42 @@ public static class LabPackageBuilder
         sb.AppendLine("  • .upet = raport proprietar (date + grafice + poze) — deschideți în UPET AcqLab.");
         sb.AppendLine("  • .zip fără parolă = deschideți în Explorer.");
         sb.AppendLine("  • .upetlab = același ZIP, criptat AES cu parolă — doar UPET AcqLab.");
+        sb.AppendLine("  • *_video.mp4 = film epruvetă pe durata Record (cameră USB), separat de pozele montaj.");
         return sb.ToString();
+    }
+
+    /// <summary>MP4-uri existente din meta experiment (ultimele Rec-uri).</summary>
+    public static IReadOnlyList<string> ExistingExperimentVideos(ProjectMeta? meta)
+    {
+        var list = new List<string>();
+        if (meta is null) return list;
+        void add(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+            if (!list.Contains(path, StringComparer.OrdinalIgnoreCase))
+                list.Add(path);
+        }
+
+        add(meta.ExperimentVideoPath);
+        if (meta.ExperimentVideoFiles is not null)
+        {
+            foreach (var p in meta.ExperimentVideoFiles)
+                add(p);
+        }
+
+        return list;
+    }
+
+    public static void CopyExperimentVideos(ProjectMeta? meta, string destDirectory, ICollection<string> included)
+    {
+        foreach (var path in ExistingExperimentVideos(meta))
+        {
+            var name = Path.GetFileName(path);
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            TryCopy(path, destDirectory, name);
+            if (!included.Contains(name, StringComparer.OrdinalIgnoreCase))
+                included.Add(name);
+        }
     }
 
     public static void WriteReadme(string directory, string text)

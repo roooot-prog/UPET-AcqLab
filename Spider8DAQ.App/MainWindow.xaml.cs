@@ -54,6 +54,8 @@ public partial class MainWindow : Window
             try
             {
                 _vm.AttachPlots(PlotA, PlotB, PlotAnalysis);
+                if (AnalysisVideoPlayer is not null)
+                    _vm.AttachAnalysisVideo(AnalysisVideoPlayer);
                 if (PlotDataViewer is not null)
                     _vm.AttachDataViewerPlot(PlotDataViewer);
                 if (PlotDefectExample is not null)

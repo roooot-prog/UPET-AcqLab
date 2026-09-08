@@ -77,6 +77,16 @@ public sealed class ProjectMeta
     public string MontageBeforeCapturedLocal { get; set; } = "";
     /// <summary>Moment captură probă după (ora locală, ISO).</summary>
     public string MontageAfterCapturedLocal { get; set; } = "";
+    /// <summary>Filmează epruveta pe durata Record (cameră USB, separat de poza montaj).</summary>
+    public bool ExperimentVideoEnabled { get; set; }
+    /// <summary>Id WinRT al camerei video alese la Start experiment.</summary>
+    public string ExperimentCameraId { get; set; } = "";
+    /// <summary>Nume afișat al camerei (USB / laptop).</summary>
+    public string ExperimentCameraName { get; set; } = "";
+    /// <summary>Ultimul clip MP4 al experimentului (cale absolută).</summary>
+    public string ExperimentVideoPath { get; set; } = "";
+    /// <summary>Toate clipurile MP4 din sesiune (un Rec = un fișier).</summary>
+    public List<string> ExperimentVideoFiles { get; set; } = new();
     /// <summary>Închidere experiment (ora locală, ISO).</summary>
     public string ExperimentEndLocal { get; set; } = "";
     /// <summary>Lungime probă [mm]; 0 = nespecificat.</summary>

@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Spider8DAQ.App.Integrations;
 using Spider8DAQ.App.ViewModels;
 using Spider8DAQ.Core;
 using Spider8DAQ.Core.Export;
@@ -74,6 +75,10 @@ public sealed class StartExperimentWindow : Window
     private readonly List<(ComboBox Channel, TextBox Angle)> _sensorRows = new();
     private readonly bool _simulatorContourDemo;
     private StackPanel? _simAssignPanel;
+    private readonly LabUsbCameraService? _usbCamera;
+    private CheckBox _filmCheck = null!;
+    private ComboBox _cameraBox = null!;
+    private TextBlock _cameraHint = null!;
 
     private SpecimenLibrary _specimenLibrary = SpecimenLibrary.Load();
     private SpecimenCard? _selectedSpecimen;
@@ -114,6 +119,9 @@ public sealed class StartExperimentWindow : Window
     public string MontagePhotoPathValue => _montagePhotoPath;
     public string MontageBeforeNotesValue { get; private set; } = "";
     public DateTime? MontageBeforeCapturedAtValue => _beforeCapturedAt;
+    public bool ExperimentVideoEnabledValue { get; private set; }
+    public string ExperimentCameraIdValue { get; private set; } = "";
+    public string ExperimentCameraNameValue { get; private set; } = "";
     public CylinderContourConfig? ContourConfigValue { get; private set; }
     /// <summary>True when Simulator + Contur + 8 senzori — random 8/1/3 mm ramp on Start.</summary>
     public bool ContourSimDemoEnabled { get; private set; }
@@ -148,7 +156,8 @@ public sealed class StartExperimentWindow : Window
         double specimenYoungGPa = 0,
         double specimenPoissonNu = 0,
         string? specimenNotes = null,
-        bool simulatorContourDemo = false)
+        bool simulatorContourDemo = false,
+        LabUsbCameraService? usbCamera = null)
     {
         _allSensors = sensors;
         _channelCount = Math.Clamp(channelCount <= 0 ? 8 : channelCount, 1, 32);
@@ -157,6 +166,7 @@ public sealed class StartExperimentWindow : Window
         _beforeCapturedAt = montageBeforeCapturedAt;
         _initialSpecimenId = initialSpecimenId ?? "";
         _simulatorContourDemo = simulatorContourDemo;
+        _usbCamera = usbCamera;
 
         Title = "Start experiment — UPET AcqLab";
         Width = 700;
@@ -217,7 +227,7 @@ public sealed class StartExperimentWindow : Window
 
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var form = new Grid { Margin = new Thickness(0, 0, 4, 0) };
-        for (var i = 0; i < 16; i++)
+        for (var i = 0; i < 17; i++)
             form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -368,6 +378,9 @@ public sealed class StartExperimentWindow : Window
         if (!string.IsNullOrWhiteSpace(_montagePhotoPath))
             ShowPhotoPreview(_montagePhotoPath);
 
+        var filmPanel = BuildFilmPanel();
+        AddLabeledControl(form, 14, "Film experiment\n(cameră USB)", filmPanel);
+
         _sensorList = new ListBox
         {
             Height = 120,
@@ -376,7 +389,7 @@ public sealed class StartExperimentWindow : Window
             DisplayMemberPath = nameof(SensorPickItem.Display)
         };
         _sensorList.ItemsSource = _sensorItems;
-        AddLabeledControl(form, 14, "Senzori planificați\n(Ctrl+click)", _sensorList);
+        AddLabeledControl(form, 15, "Senzori planificați\n(Ctrl+click)", _sensorList);
 
         _applySensorsCheck = new CheckBox
         {
@@ -384,7 +397,7 @@ public sealed class StartExperimentWindow : Window
             IsChecked = true,
             Margin = new Thickness(0, 0, 0, 4)
         };
-        Grid.SetRow(_applySensorsCheck, 15);
+        Grid.SetRow(_applySensorsCheck, 16);
         Grid.SetColumn(_applySensorsCheck, 1);
         form.Children.Add(_applySensorsCheck);
 
@@ -397,6 +410,13 @@ public sealed class StartExperimentWindow : Window
         RefreshSensorList();
         RestoreSpecimenSelection(fillDimensions: false);
         UpdateSpecimenSearchPlaceholder();
+        Closed += (_, _) => DetachCameraWatcher();
+        Loaded += async (_, _) =>
+        {
+            if (_usbCamera is not null)
+                await _usbCamera.RefreshAsync().ConfigureAwait(true);
+            RefreshCameraList();
+        };
     }
 
     private UIElement BuildSpecimenPanel(double youngGPa, double poissonNu, string? notes)
@@ -821,6 +841,102 @@ public sealed class StartExperimentWindow : Window
         };
         photoPanel.Children.Add(_beforeNotesBox);
         return photoPanel;
+    }
+
+    private StackPanel BuildFilmPanel()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Separat de poza de montaj. La Record, aplicația filmează epruveta până la Stop rec. Clipul MP4 intră automat în pachetul de laborator.",
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x65, 0x73)),
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        _filmCheck = new CheckBox
+        {
+            Content = "Filmează epruveta la Record",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 6),
+            IsChecked = _usbCamera is not null && _usbCamera.Devices.Count > 0
+        };
+        panel.Children.Add(_filmCheck);
+
+        var row = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+        var refresh = new Button
+        {
+            Content = "Reîncarcă",
+            Padding = new Thickness(10, 4, 10, 4),
+            Margin = new Thickness(8, 0, 0, 0)
+        };
+        refresh.Click += async (_, _) =>
+        {
+            if (_usbCamera is not null)
+                await _usbCamera.RefreshAsync().ConfigureAwait(true);
+            RefreshCameraList();
+        };
+        DockPanel.SetDock(refresh, Dock.Right);
+        _cameraBox = new ComboBox
+        {
+            MinHeight = 28,
+            DisplayMemberPath = nameof(LabVideoDeviceInfo.Display)
+        };
+        row.Children.Add(refresh);
+        row.Children.Add(_cameraBox);
+        panel.Children.Add(row);
+
+        _cameraHint = new TextBlock
+        {
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x65, 0x73))
+        };
+        panel.Children.Add(_cameraHint);
+
+        if (_usbCamera is not null)
+            _usbCamera.DevicesChanged += OnCameraDevicesChanged;
+        RefreshCameraList();
+        return panel;
+    }
+
+    private void OnCameraDevicesChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(RefreshCameraList);
+
+    private void RefreshCameraList()
+    {
+        if (_cameraBox is null || _cameraHint is null || _filmCheck is null) return;
+        var keepId = (_cameraBox.SelectedItem as LabVideoDeviceInfo)?.Id;
+        _cameraBox.Items.Clear();
+        var devices = _usbCamera?.Devices ?? new ObservableCollection<LabVideoDeviceInfo>();
+        foreach (var d in devices)
+            _cameraBox.Items.Add(d);
+
+        LabVideoDeviceInfo? pick = null;
+        if (!string.IsNullOrWhiteSpace(keepId))
+            pick = devices.FirstOrDefault(d => string.Equals(d.Id, keepId, StringComparison.OrdinalIgnoreCase));
+        pick ??= _usbCamera?.AutoSelect();
+        if (pick is not null)
+            _cameraBox.SelectedItem = pick;
+        else if (_cameraBox.Items.Count > 0)
+            _cameraBox.SelectedIndex = 0;
+
+        var connected = devices.Count > 0;
+        if (connected && _filmCheck.IsChecked != false)
+            _filmCheck.IsChecked = true;
+        _cameraHint.Text = _usbCamera is null
+            ? "Serviciul de cameră nu e disponibil pe acest PC."
+            : _usbCamera.StatusSummary((pick ?? _usbCamera.AutoSelect())?.Id);
+        _cameraHint.Foreground = new SolidColorBrush(connected
+            ? Color.FromRgb(0x1B, 0x7A, 0x3A)
+            : Color.FromRgb(0xA3, 0x3B, 0x2B));
+    }
+
+    private void DetachCameraWatcher()
+    {
+        if (_usbCamera is null) return;
+        _usbCamera.DevicesChanged -= OnCameraDevicesChanged;
     }
 
     private Expander BuildContourExpander(CylinderContourConfig? initial, double diameterMm)
@@ -1529,6 +1645,11 @@ public sealed class StartExperimentWindow : Window
         PlannedSensors = _sensorList.SelectedItems.Cast<SensorPickItem>().Select(i => i.Sensor).ToList();
         ApplySensorsToChannels = _applySensorsCheck.IsChecked == true;
         MontageBeforeNotesValue = _beforeNotesBox.Text.Trim();
+        var cam = _cameraBox?.SelectedItem as LabVideoDeviceInfo ?? _usbCamera?.AutoSelect();
+        ExperimentVideoEnabledValue = _filmCheck?.IsChecked == true;
+        ExperimentCameraIdValue = cam?.Id ?? "";
+        ExperimentCameraNameValue = cam?.Name ?? "";
+        DetachCameraWatcher();
         Confirmed = true;
         DialogResult = true;
         Close();
