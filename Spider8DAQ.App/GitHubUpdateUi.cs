@@ -26,11 +26,19 @@ public static class GitHubUpdateUi
         if (!GitHubPrivateUpdater.IsConfigured(ownerName, repo))
             return;
 
+        UpdatingWindow? checking = null;
         try
         {
             using var updater = new GitHubPrivateUpdater();
             var local = GitHubPrivateUpdater.GetLocalFileVersion();
+            if (interactive)
+            {
+                checking = UpdatingWindow.TryShow(owner, local.ToString(3), "…");
+                checking?.SetStage("Se verifică GitHub…", "Versiunea instalată " + local.ToString(3));
+            }
             var result = await updater.CheckLatestAsync(ownerName, repo, token, local);
+            try { checking?.Close(); } catch { /* ignore */ }
+            checking = null;
             if (!result.Ok)
             {
                 if (interactive)
@@ -58,6 +66,7 @@ public static class GitHubUpdateUi
         }
         catch (Exception ex)
         {
+            try { checking?.Close(); } catch { /* ignore */ }
             if (interactive)
             {
                 MessageBox.Show(
@@ -224,17 +233,31 @@ public static class GitHubUpdateUi
         }
 
         UpdatingWindow? progress = null;
+        var applied = false;
         try
         {
-            var verText = release.Version?.ToString(3)
-                          ?? release.TagName.TrimStart('v', 'V');
-            progress = UpdatingWindow.TryShow(
-                owner,
-                "Se descarcă și se instalează versiunea " + verText + ".\nAplicația se repornește singură.");
+            var toVer = release.Version?.ToString(3)
+                        ?? release.TagName.TrimStart('v', 'V');
+            var fromVer = GitHubPrivateUpdater.GetLocalFileVersion().ToString(3);
+            if (showUi)
+            {
+                progress = UpdatingWindow.TryShow(owner, fromVer, toVer);
+                progress?.SetStage(
+                    "Se descarcă " + GitHubPrivateUpdater.PreferredAssetName + "…",
+                    "Versiunea " + fromVer + " → " + toVer);
+            }
 
             AppPaths.EnsureWritable(AppPaths.Updates);
             var zipPath = Path.Combine(AppPaths.Updates, GitHubPrivateUpdater.PreferredAssetName);
-            await updater.DownloadUpdateZipAsync(asset, token, zipPath);
+            IProgress<GitHubDownloadProgress>? dl = progress is null
+                ? null
+                : new Progress<GitHubDownloadProgress>(progress.SetDownload);
+            await updater.DownloadUpdateZipAsync(asset, token, zipPath, dl).ConfigureAwait(true);
+
+            progress?.SetStage(
+                "Se pregătește instalarea…",
+                "Fișierele se copiază după închiderea aplicației.",
+                complete: true);
 
             var exe = Environment.ProcessPath
                       ?? Path.Combine(installRoot, "UPETAcqLab.exe");
@@ -243,6 +266,12 @@ public static class GitHubUpdateUi
                 installRoot,
                 exe,
                 Environment.ProcessId);
+
+            progress?.SetStage(
+                "Se repornește UPET AcqLab…",
+                "Așteptați câteva secunde. Nu închideți fereastra.",
+                complete: true);
+            applied = true;
             if (shutdown)
                 Application.Current?.Shutdown(0);
             return true;
@@ -262,7 +291,10 @@ public static class GitHubUpdateUi
         }
         finally
         {
-            try { progress?.Close(); } catch { /* shutting down */ }
+            if (!applied)
+            {
+                try { progress?.Close(); } catch { /* ignore */ }
+            }
         }
     }
 }

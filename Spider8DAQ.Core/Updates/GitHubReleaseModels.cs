@@ -35,3 +35,18 @@ public sealed class GitHubTestConnectionResult
     public int StatusCode { get; init; }
     public string? TagName { get; init; }
 }
+
+public readonly struct GitHubDownloadProgress
+{
+    public GitHubDownloadProgress(long bytesReceived, long? totalBytes)
+    {
+        BytesReceived = bytesReceived;
+        TotalBytes = totalBytes;
+    }
+
+    public long BytesReceived { get; }
+    public long? TotalBytes { get; }
+    public bool HasTotal => TotalBytes is > 0;
+    public double Percent =>
+        HasTotal ? Math.Clamp(100.0 * BytesReceived / TotalBytes!.Value, 0, 100) : 0;
+}

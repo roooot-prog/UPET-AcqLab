@@ -342,6 +342,43 @@ public class GitHubPrivateUpdaterTests
     }
 
     [Fact]
+    public async Task DownloadUpdateZip_reports_byte_progress()
+    {
+        var payload = new byte[200_000];
+        Random.Shared.NextBytes(payload);
+        var handler = new StubHandler((_, _) =>
+        {
+            var content = new ByteArrayContent(payload);
+            content.Headers.ContentLength = payload.Length;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        });
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        using var updater = new GitHubPrivateUpdater(http);
+        var dest = Path.Combine(Path.GetTempPath(), "upet_dl_" + Guid.NewGuid().ToString("N") + ".zip");
+        var reports = new List<GitHubDownloadProgress>();
+        try
+        {
+            var asset = new GitHubReleaseAsset
+            {
+                Name = "UPETAcqLab-update.zip",
+                BrowserDownloadUrl = "https://example.test/UPETAcqLab-update.zip",
+                Size = payload.Length
+            };
+            await updater.DownloadUpdateZipAsync(asset, token: null, dest, new CollectProgress(reports));
+            Assert.True(File.Exists(dest));
+            Assert.True(reports.Count >= 2);
+            Assert.Equal(0, reports[0].BytesReceived);
+            Assert.Equal(payload.Length, reports[^1].BytesReceived);
+            Assert.Equal(payload.Length, reports[^1].TotalBytes);
+            Assert.True(reports[^1].Percent >= 99.9);
+        }
+        finally
+        {
+            if (File.Exists(dest)) File.Delete(dest);
+        }
+    }
+
+    [Fact]
     public async Task CheckLatest_401_is_auth_error()
     {
         var handler = new StubHandler((_, _) =>
@@ -355,6 +392,13 @@ public class GitHubPrivateUpdaterTests
         Assert.False(result.Ok);
         Assert.Equal(401, result.StatusCode);
         Assert.Contains("autentificare", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class CollectProgress : IProgress<GitHubDownloadProgress>
+    {
+        private readonly List<GitHubDownloadProgress> _items;
+        public CollectProgress(List<GitHubDownloadProgress> items) => _items = items;
+        public void Report(GitHubDownloadProgress value) => _items.Add(value);
     }
 
     private sealed class StubHandler : HttpMessageHandler

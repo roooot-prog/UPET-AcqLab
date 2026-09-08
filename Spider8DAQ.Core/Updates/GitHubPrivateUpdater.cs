@@ -320,6 +320,7 @@ public sealed class GitHubPrivateUpdater : IDisposable
         GitHubReleaseAsset asset,
         string? token,
         string destinationZipPath,
+        IProgress<GitHubDownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var authenticated = !string.IsNullOrWhiteSpace(token);
@@ -349,8 +350,28 @@ public sealed class GitHubPrivateUpdater : IDisposable
                 throw new InvalidOperationException(DescribeHttpError(code) + " (descărcare asset).");
             }
 
+            long? total = resp.Content.Headers.ContentLength;
+            if (total is not > 0 && asset.Size > 0)
+                total = asset.Size;
+
+            await using var src = await resp.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             await using var fs = new FileStream(destinationZipPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await resp.Content.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
+            var buffer = new byte[81920];
+            long received = 0;
+            var lastReport = -1L;
+            progress?.Report(new GitHubDownloadProgress(0, total));
+            int read;
+            while ((read = await src.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                await fs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                received += read;
+                if (received - lastReport < 65536 && received != total)
+                    continue;
+                lastReport = received;
+                progress?.Report(new GitHubDownloadProgress(received, total));
+            }
+
+            progress?.Report(new GitHubDownloadProgress(received, total ?? received));
         }
 
         return destinationZipPath;
