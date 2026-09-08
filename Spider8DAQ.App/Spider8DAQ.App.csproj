@@ -12,10 +12,10 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <RootNamespace>Spider8DAQ.App</RootNamespace>
     <AssemblyName>UPETAcqLab</AssemblyName>
-        <Version>3.3.115</Version>
-    <FileVersion>3.3.115</FileVersion>
-    <AssemblyVersion>3.3.115.0</AssemblyVersion>
-    <InformationalVersion>3.3.115</InformationalVersion>
+        <Version>3.3.116</Version>
+    <FileVersion>3.3.116</FileVersion>
+    <AssemblyVersion>3.3.116.0</AssemblyVersion>
+    <InformationalVersion>3.3.116</InformationalVersion>
     <Title>UPET AcqLab</Title>
     <Product>UPET AcqLab - Universitatea din Petrosani</Product>
     <Company>Universitatea din Petrosani</Company>

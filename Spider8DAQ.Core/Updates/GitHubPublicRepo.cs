@@ -8,4 +8,8 @@ public static class GitHubPublicRepo
 {
     public const string Owner = "roooot-prog";
     public const string Repo = "UPET-AcqLab";
+
+    /// <summary>Live LAN + Cloudflare URLs for lab heartbeats (updated on each Admin start / release).</summary>
+    public static string LicenseServerCatalogUrl =>
+        "https://raw.githubusercontent.com/" + Owner + "/" + Repo + "/main/tools/license-server.release.json";
 }

@@ -70,6 +70,15 @@ public class ApplicationKeyTests
                     "https://von-lions-native-channels.trycloudflare.com"
                 },
                 cfg.CandidateUrls);
+            Assert.Equal(
+                new[]
+                {
+                    "http://192.168.0.61:5088",
+                    "https://live.example.test"
+                },
+                ApplicationKeyConfig.MergeUrls(
+                    new[] { "http://192.168.0.61:5088" },
+                    new[] { "https://live.example.test", "http://192.168.0.61:5088" }));
         }
         finally
         {

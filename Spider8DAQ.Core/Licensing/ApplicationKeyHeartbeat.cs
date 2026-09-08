@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text.Json;
+using Spider8DAQ.Core.Updates;
 
 namespace Spider8DAQ.Core.Licensing;
 
@@ -19,6 +21,8 @@ public static class ApplicationKeyHeartbeat
     private static Action? _onZero;
     private static DateTime _lastUrgentUtc = DateTime.MinValue;
     private static string? _lastGoodUrl;
+    private static readonly List<string> _catalogUrls = new();
+    private static DateTime _nextCatalogUtc = DateTime.MinValue;
 
     /// <summary>Admin requested GitHub update (target tag, or null = latest).</summary>
     public static event Action<string?>? RemoteUpdateRequested
@@ -110,15 +114,51 @@ public static class ApplicationKeyHeartbeat
         });
     }
 
+    private static IReadOnlyList<string> EffectiveUrls(IReadOnlyList<string> local)
+    {
+        List<string> extra;
+        lock (Gate)
+            extra = _catalogUrls.ToList();
+        return ApplicationKeyConfig.MergeUrls(local, extra);
+    }
+
+    private static async Task RefreshCatalogQuietAsync(CancellationToken ct)
+    {
+        if (DateTime.UtcNow < _nextCatalogUtc) return;
+        _nextCatalogUtc = DateTime.UtcNow.AddMinutes(5);
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd(GitHubPrivateUpdater.UserAgent);
+            var json = await http.GetStringAsync(GitHubPublicRepo.LicenseServerCatalogUrl, ct)
+                .ConfigureAwait(false);
+            var cfg = JsonSerializer.Deserialize<ApplicationKeyConfig>(json);
+            if (cfg is null) return;
+            lock (Gate)
+            {
+                _catalogUrls.Clear();
+                _catalogUrls.AddRange(cfg.CandidateUrls);
+            }
+        }
+        catch
+        {
+            /* keep last catalog / local json */
+        }
+    }
+
     private static async Task LoopAsync(IReadOnlyList<string> baseUrls, CancellationToken ct)
     {
-        await SendQuietAsync(baseUrls, ct).ConfigureAwait(false);
+        await RefreshCatalogQuietAsync(ct).ConfigureAwait(false);
+        await SendQuietAsync(EffectiveUrls(baseUrls), ct).ConfigureAwait(false);
         _ = LiveLoopAsync(baseUrls, ct);
         using var timer = new PeriodicTimer(LicensedInterval);
         try
         {
             while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
-                await SendQuietAsync(baseUrls, ct).ConfigureAwait(false);
+            {
+                await RefreshCatalogQuietAsync(ct).ConfigureAwait(false);
+                await SendQuietAsync(EffectiveUrls(baseUrls), ct).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -133,7 +173,7 @@ public static class ApplicationKeyHeartbeat
             while (!ct.IsCancellationRequested)
             {
                 var started = Stopwatch.GetTimestamp();
-                await SendLiveQuietAsync(baseUrls, ct).ConfigureAwait(false);
+                await SendLiveQuietAsync(EffectiveUrls(baseUrls), ct).ConfigureAwait(false);
                 var waitMs = LiveInterval.TotalMilliseconds
                     - Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                 if (waitMs > 0)

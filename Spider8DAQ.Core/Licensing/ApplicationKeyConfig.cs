@@ -60,6 +60,23 @@ public sealed class ApplicationKeyConfig
         list.Add(s);
     }
 
+    /// <summary>Local json first, then extra bases (GitHub catalog / previous tunnel).</summary>
+    public static IReadOnlyList<string> MergeUrls(IEnumerable<string?> first, IEnumerable<string?> extra)
+    {
+        var list = new List<string>();
+        if (first is not null)
+        {
+            foreach (var u in first)
+                AddUnique(list, u);
+        }
+        if (extra is not null)
+        {
+            foreach (var u in extra)
+                AddUnique(list, u);
+        }
+        return list;
+    }
+
     /// <summary>
     /// Configured URL, or loopback for writing next to <c>publish-v2</c>.
     /// Heartbeat itself still requires <see cref="IsConfigured"/> (source tree stays skipped).
